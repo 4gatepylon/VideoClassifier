@@ -32,41 +32,66 @@ for sent, tags in training_data:
             word_to_ix[word] = len(word_to_ix)
 tag_to_ix = {"DET": 0, "NN": 1, "V": 2}
 
+char_to_ix = {}
+for sent, tags in training_data:
+    for word in sent:
+        for char in word:
+            if char not in char_to_ix:
+                char_to_ix[char] = len(char_to_ix)
+
 # These will usually be more like 32 or 64 dimensional.
 # We will keep them small, so we can see how the weights change as we train.
+CHAR_EMBEDDING_DIM = 3
 EMBEDDING_DIM = 6
 HIDDEN_DIM = 6
+CHAR_HIDDEN_DIM = 1
 
 class LSTMTagger(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, tagset_size):
+    def __init__(self, embedding_dim, char_embedding_dim, hidden_dim, char_hidden_dim, vocab_size, char_size, tagset_size):
         super(LSTMTagger, self).__init__()
         self.hidden_dim = hidden_dim
+        self.char_hidden_dim = char_hidden_dim
+
+        total_embedding_dim = embedding_dim + char_hidden_dim
+
+        self.char_embeddings = nn.Embedding(char_size, char_embedding_dim)
+        self.char_lstm = nn.LSTM(char_embedding_dim, char_hidden_dim)
 
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim)
+        self.lstm = nn.LSTM(total_embedding_dim, hidden_dim)
         self.hidden2tag = nn.Linear(hidden_dim, tagset_size)
 
-    def forward(self, sentence):
-        embds = self.embeddings(sentence)
-        out, _ = self.lstm(embds.view(len(sentence), 1, -1))
-        out = self.hidden2tag(out.view(len(sentence), -1))
+    def forward(self, sentence_bundle):
+        sentence_ix_c, sentence_ix, offsets = sentence_bundle
+        
+        # hacky shit
+        char_embds = self.char_embeddings(sentence_ix_c)
+        chars_out, _ = self.char_lstm(char_embds.view(len(sentence_ix_c), 1, -1))
+        offset_chars = []
+        for offset in offsets:
+            offset_chars.append([chars_out[offset].item()])
+        words_chars_out = torch.tensor(offset_chars)
+        embds = self.embeddings(sentence_ix)
+        embds = torch.cat((embds, words_chars_out), dim=1)
+
+        out, _ = self.lstm(embds.view(len(sentence_ix), 1, -1))
+        out = self.hidden2tag(out.view(len(sentence_ix), -1))
         out = F.log_softmax(out, dim=1)
         return out
 
     
-model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, len(word_to_ix), len(tag_to_ix))
+model = LSTMTagger(
+    EMBEDDING_DIM, 
+    CHAR_EMBEDDING_DIM, 
+    HIDDEN_DIM, 
+    CHAR_HIDDEN_DIM, 
+    len(word_to_ix), 
+    len(char_to_ix), 
+    len(tag_to_ix)
+)
 loss_function = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.2)
 
-# See what the scores are before training
-# Note that element i,j of the output is the score for tag j for word i.
-# Here we don't need to train, so the code is wrapped in torch.no_grad()
-with torch.no_grad():
-    inputs = prepare_sequence(training_data[0][0], word_to_ix)
-    tag_scores = model(inputs)
-    print(tag_scores)
-    print("predict", torch.argmax(tag_scores, dim=1), "should be", prepare_sequence(training_data[0][1], tag_to_ix))
-print("")
 for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
     total_loss = 0
     for sentence, tags in training_data:
@@ -77,10 +102,17 @@ for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is t
         # Step 2. Get our inputs ready for the network, that is, turn them into
         # Tensors of word indices.
         sentence_in = prepare_sequence(sentence, word_to_ix)
+        sentence_in_c = prepare_sequence("".join(sentence), char_to_ix)
         targets = prepare_sequence(tags, tag_to_ix)
 
+        offsets = []
+        offset = 0
+        for word in sentence:
+            offsets.append(offset)
+            offset += len(word)
+
         # Step 3. Run our forward pass.
-        tag_scores = model(sentence_in)
+        tag_scores = model((sentence_in_c, sentence_in, offsets))
 
         # Step 4. Compute the loss, gradients, and update the parameters by
         #  calling optimizer.step()
@@ -92,7 +124,13 @@ for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is t
 
 # See what the scores are after training
 with torch.no_grad():
-    inputs = prepare_sequence(training_data[0][0], word_to_ix)
+    sentence = training_data[0][0]
+    offsets = []
+    offset = 0
+    for word in sentence:
+        offsets.append(offset)
+        offset += len(word)
+    inputs = prepare_sequence("".join(sentence), char_to_ix), prepare_sequence(sentence, word_to_ix), offsets
     tag_scores = model(inputs)
 
     # The sentence is "the dog ate the apple".  i,j corresponds to score for tag j
