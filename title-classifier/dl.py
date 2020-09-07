@@ -16,79 +16,90 @@ import torch.optim as optim
 
 torch.manual_seed(1)
 
-CONTEXT_SIZE = 2  # 2 words to the left, 2 to the right
-EMBEDDING_DIM = 16
-
-raw_text = """We are about to study the idea of a computational process.
-Computational processes are abstract beings that inhabit computers.
-As they evolve, processes manipulate other abstract things called data.
-The evolution of a process is directed by a pattern of rules
-called a program. People create programs to direct processes. In effect,
-we conjure the spirits of the computer with our spells.""".split()
-
-# By deriving a set from `raw_text`, we deduplicate the array
-_vocab = set(raw_text)
-vocab_size = len(_vocab)
-
-word_to_ix = {word: i for i, word in enumerate(_vocab)}
-data = []
-for i in range(2, len(raw_text) - 2):
-    context = [raw_text[i - 2], raw_text[i - 1],
-               raw_text[i + 1], raw_text[i + 2]]
-    target = raw_text[i]
-    data.append((context, target))
-
-
-class CBOW(nn.Module):
-
-    def __init__(self, vocab_size, embedding_dim, context_size):
-        super(CBOW, self).__init__()
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.linear1 = nn.Linear(2 * context_size * embedding_dim, 264)
-        self.linear2 = nn.Linear(264, vocab_size)
-
-    def forward(self, inputs):
-        embeds = self.embeddings(inputs).view((1, -1))
-        out = F.relu(self.linear1(embeds))
-        out = self.linear2(out)
-        log_probs = F.log_softmax(out, dim=1)
-        return log_probs
-
-def make_context_vector(context, word_to_ix):
-    idxs = [word_to_ix[w] for w in context]
+def prepare_sequence(seq, to_ix):
+    idxs = [to_ix[w] for w in seq]
     return torch.tensor(idxs, dtype=torch.long)
 
-model = CBOW(vocab_size, EMBEDDING_DIM, CONTEXT_SIZE)
 
+training_data = [
+    ("The dog ate the apple".split(), ["DET", "NN", "V", "DET", "NN"]),
+    ("Everybody read that book".split(), ["NN", "V", "DET", "NN"])
+]
+word_to_ix = {}
+for sent, tags in training_data:
+    for word in sent:
+        if word not in word_to_ix:
+            word_to_ix[word] = len(word_to_ix)
+tag_to_ix = {"DET": 0, "NN": 1, "V": 2}
+
+# These will usually be more like 32 or 64 dimensional.
+# We will keep them small, so we can see how the weights change as we train.
+EMBEDDING_DIM = 6
+HIDDEN_DIM = 6
+
+class LSTMTagger(nn.Module):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, tagset_size):
+        super(LSTMTagger, self).__init__()
+        self.hidden_dim = hidden_dim
+
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim)
+        self.hidden2tag = nn.Linear(hidden_dim, tagset_size)
+
+    def forward(self, sentence):
+        embds = self.embeddings(sentence)
+        out, _ = self.lstm(embds.view(len(sentence), 1, -1))
+        out = self.hidden2tag(out.view(len(sentence), -1))
+        out = F.log_softmax(out, dim=1)
+        return out
+
+    
+model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, len(word_to_ix), len(tag_to_ix))
 loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.005)
+optimizer = optim.SGD(model.parameters(), lr=0.2)
 
-for epoch in range(100):
+# See what the scores are before training
+# Note that element i,j of the output is the score for tag j for word i.
+# Here we don't need to train, so the code is wrapped in torch.no_grad()
+with torch.no_grad():
+    inputs = prepare_sequence(training_data[0][0], word_to_ix)
+    tag_scores = model(inputs)
+    print(tag_scores)
+    print("predict", torch.argmax(tag_scores, dim=1), "should be", prepare_sequence(training_data[0][1], tag_to_ix))
+print("")
+for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
     total_loss = 0
-    for context, target in data:
-
-        context_idxs = torch.tensor(make_context_vector(context, word_to_ix), dtype=torch.long)
-
+    for sentence, tags in training_data:
+        # Step 1. Remember that Pytorch accumulates gradients.
+        # We need to clear them out before each instance
         model.zero_grad()
-        log_probs = model(context_idxs)
 
-        # Step 4. Compute your loss function. (Again, Torch wants the target
-        # word wrapped in a tensor)
-        loss = loss_function(log_probs, torch.tensor([word_to_ix[target]], dtype=torch.long))
+        # Step 2. Get our inputs ready for the network, that is, turn them into
+        # Tensors of word indices.
+        sentence_in = prepare_sequence(sentence, word_to_ix)
+        targets = prepare_sequence(tags, tag_to_ix)
 
-        # Step 5. Do the backward pass and update the gradient
+        # Step 3. Run our forward pass.
+        tag_scores = model(sentence_in)
+
+        # Step 4. Compute the loss, gradients, and update the parameters by
+        #  calling optimizer.step()
+        loss = loss_function(tag_scores, targets)
+        total_loss += loss.item()
         loss.backward()
         optimizer.step()
-
-        # Get the Python number from a 1-element Tensor by calling tensor.item()
-        total_loss += loss.item()
     print(total_loss)
-print("")
-for context, target in data:
 
-        context_idxs = torch.tensor(make_context_vector(context, word_to_ix), dtype=torch.long)
+# See what the scores are after training
+with torch.no_grad():
+    inputs = prepare_sequence(training_data[0][0], word_to_ix)
+    tag_scores = model(inputs)
 
-        model.zero_grad()
-        log_probs = model(context_idxs)
-        print("should be", target, word_to_ix[target])
-        print("predicts", torch.argmax(log_probs))
+    # The sentence is "the dog ate the apple".  i,j corresponds to score for tag j
+    # for word i. The predicted tag is the maximum scoring tag.
+    # Here, we can see the predicted sequence below is 0 1 2 0 1
+    # since 0 is index of the maximum value of row 1,
+    # 1 is the index of maximum value of row 2, etc.
+    # Which is DET NOUN VERB DET NOUN, the correct sequence!
+    print(tag_scores)
+    print("predict", torch.argmax(tag_scores, dim=1), "should be", prepare_sequence(training_data[0][1], tag_to_ix))
