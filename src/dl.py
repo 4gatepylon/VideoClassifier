@@ -141,3 +141,34 @@ with torch.no_grad():
     # Which is DET NOUN VERB DET NOUN, the correct sequence!
     print(tag_scores)
     print("predict", torch.argmax(tag_scores, dim=1), "should be", prepare_sequence(training_data[0][1], tag_to_ix))
+
+
+""" misc bullshit """
+
+
+tests = [
+    "HAPPY 420 - Thomas The Tank Engine Weed Remix @SnoopDogg",
+    "Krewella - Surrender The Throne",
+    "RISE (ft. The Glitch Mob, Mako, and The Word Alive) | Worlds 2018 - League of Legends",
+    "Lovesickness [NSF, 2a03]",
+    "【東方ボーカル】 「螺旋絶望」 【豚乙女】"
+]
+
+
+# probably not gonna be used too much?
+keywords_to_class_lowercase = {
+    "東方" : "touhou",
+    "【" : "weeb",
+    "】" : "weeb",
+    "420" : "weed",
+    "league of legends" : "LOL",
+    "mario" : "mario",
+    "sonic" : "sonic",
+    "jojo" : "jojo",
+    "bizarre adventure" : "jojo",
+    "nightcore" : "nightcore",
+    "cbt" : "cbt"
+}
+
+def keywords_match_title(keywords, title):
+    pass
