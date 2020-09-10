@@ -2,19 +2,35 @@
 import requests # to get image from the web
 import shutil # to save it locally
 
+from os import listdir
+from os.path import isfile, join
+
 DATA_PATH = "../data/" # we will read our data from the data folder which is not gitignored
 FULL_DATA_PATH = DATA_PATH + "full-data/"
+
 ONLY_TITLES_PATH = DATA_PATH + "only-title/"
-CLASSES_PATH = DATA_PATH + "only-title/classes/"
+CLASSES_PATH = ONLY_TITLES_PATH + "classes/"
 
 RAW_FILE = "raw.txt"
-CLASSES_TO_FILES = {
-    "misc" : "miscellaneous.txt",
-    "weeb" : "weeb.txt",
-}
 
-DOWNLOAD_PATH = "../cache/" # we will download into the cache folder which is gitignored
-PRE_TRAINED_PATH = "../pretrained/" # we will store weights after training in a folder
+PRETRAINED_PATH = "../pretrained/" # we will store weights after training in a folder
+
+STORE_PATH = "../cache/" # we will download into the cache folder which is gitignored
+THUMBNAIL_STORE_PATH = STORE_PATH + "thumbnails/"
+
+### not intending on using these, but I'm keeping them here in case we want to add later
+AUDIO_STORE_PATH = STORE_PATH + "audio/"
+VIDEO_STORE_PATH = STORE_PATH + "videos/"
+CONFIRMED_STORE_PATH = STORE_PATH + "confirmed/"
+### this might be used if you want to do NLP analysis of comments or something like that
+### also useful for things like the language distributions which probably won't be used that much
+MISCELLANEOUS_STORE_PATH = STORE_PATH + "misc/"
+
+LANGUAGE_DIST_STORE_PATH = MISCELLANEOUS_STORE_PATH + "language-distributions/"
+
+###
+### parse/data acquisition code
+###
 
 """ parse the v1 dataset raw file, return a list of strings """
 def parse_only_title_raw(filename=RAW_FILE, path=ONLY_TITLES_PATH):
@@ -28,13 +44,13 @@ def parse_only_title_raw(filename=RAW_FILE, path=ONLY_TITLES_PATH):
             titles.append(title)
     return titles
 
-""" parse the v1 datasets that I've cleaned up, return a map from classes to their titles """
-def parse_only_title_classes(classes_to_files=CLASSES_TO_FILES, path=CLASSES_PATH):
+""" parse the v1 datasets that I've cleaned up, each file is a class with the name of the file being the classname """
+def parse_only_title_classes(path=CLASSES_PATH):
     classes_to_titles = {
-        classes : [] for classes in classes_to_files.keys()
+        _class : [] for _class in listdir(path) if isfile(join(path, _class))
         }
-    for _class, _filename in classes_to_files.items():
-        filename = path + _filename
+    for _class in classes_to_titles.keys():
+        filename = path + _class
         titles = classes_to_titles[_class]
         with open(filename) as file:
             for line in file.readlines():

@@ -16,36 +16,6 @@ import torch.optim as optim
 
 torch.manual_seed(1)
 
-def prepare_sequence(seq, to_ix):
-    idxs = [to_ix[w] for w in seq]
-    return torch.tensor(idxs, dtype=torch.long)
-
-
-training_data = [
-    ("The dog ate the apple".split(), ["DET", "NN", "V", "DET", "NN"]),
-    ("Everybody read that book".split(), ["NN", "V", "DET", "NN"])
-]
-word_to_ix = {}
-for sent, tags in training_data:
-    for word in sent:
-        if word not in word_to_ix:
-            word_to_ix[word] = len(word_to_ix)
-tag_to_ix = {"DET": 0, "NN": 1, "V": 2}
-
-char_to_ix = {}
-for sent, tags in training_data:
-    for word in sent:
-        for char in word:
-            if char not in char_to_ix:
-                char_to_ix[char] = len(char_to_ix)
-
-# These will usually be more like 32 or 64 dimensional.
-# We will keep them small, so we can see how the weights change as we train.
-CHAR_EMBEDDING_DIM = 3
-EMBEDDING_DIM = 6
-HIDDEN_DIM = 6
-CHAR_HIDDEN_DIM = 1
-
 class LSTMTagger(nn.Module):
     def __init__(self, embedding_dim, char_embedding_dim, hidden_dim, char_hidden_dim, vocab_size, char_size, tagset_size):
         super(LSTMTagger, self).__init__()
@@ -79,82 +49,6 @@ class LSTMTagger(nn.Module):
         out = F.log_softmax(out, dim=1)
         return out
 
-    
-model = LSTMTagger(
-    EMBEDDING_DIM, 
-    CHAR_EMBEDDING_DIM, 
-    HIDDEN_DIM, 
-    CHAR_HIDDEN_DIM, 
-    len(word_to_ix), 
-    len(char_to_ix), 
-    len(tag_to_ix)
-)
-loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.2)
-
-for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
-    total_loss = 0
-    for sentence, tags in training_data:
-        # Step 1. Remember that Pytorch accumulates gradients.
-        # We need to clear them out before each instance
-        model.zero_grad()
-
-        # Step 2. Get our inputs ready for the network, that is, turn them into
-        # Tensors of word indices.
-        sentence_in = prepare_sequence(sentence, word_to_ix)
-        sentence_in_c = prepare_sequence("".join(sentence), char_to_ix)
-        targets = prepare_sequence(tags, tag_to_ix)
-
-        offsets = []
-        offset = 0
-        for word in sentence:
-            offsets.append(offset)
-            offset += len(word)
-
-        # Step 3. Run our forward pass.
-        tag_scores = model((sentence_in_c, sentence_in, offsets))
-
-        # Step 4. Compute the loss, gradients, and update the parameters by
-        #  calling optimizer.step()
-        loss = loss_function(tag_scores, targets)
-        total_loss += loss.item()
-        loss.backward()
-        optimizer.step()
-    print(total_loss)
-
-# See what the scores are after training
-with torch.no_grad():
-    sentence = training_data[0][0]
-    offsets = []
-    offset = 0
-    for word in sentence:
-        offsets.append(offset)
-        offset += len(word)
-    inputs = prepare_sequence("".join(sentence), char_to_ix), prepare_sequence(sentence, word_to_ix), offsets
-    tag_scores = model(inputs)
-
-    # The sentence is "the dog ate the apple".  i,j corresponds to score for tag j
-    # for word i. The predicted tag is the maximum scoring tag.
-    # Here, we can see the predicted sequence below is 0 1 2 0 1
-    # since 0 is index of the maximum value of row 1,
-    # 1 is the index of maximum value of row 2, etc.
-    # Which is DET NOUN VERB DET NOUN, the correct sequence!
-    print(tag_scores)
-    print("predict", torch.argmax(tag_scores, dim=1), "should be", prepare_sequence(training_data[0][1], tag_to_ix))
-
-
-""" misc bullshit """
-
-
-tests = [
-    "HAPPY 420 - Thomas The Tank Engine Weed Remix @SnoopDogg",
-    "Krewella - Surrender The Throne",
-    "RISE (ft. The Glitch Mob, Mako, and The Word Alive) | Worlds 2018 - League of Legends",
-    "Lovesickness [NSF, 2a03]",
-    "【東方ボーカル】 「螺旋絶望」 【豚乙女】"
-]
-
-
 # probably not gonna be used too much?
 keywords_to_class_lowercase = {
     "東方" : "touhou",
@@ -170,5 +64,42 @@ keywords_to_class_lowercase = {
     "cbt" : "cbt"
 }
 
-def keywords_match_title(keywords, title):
-    pass
+
+class Conv1dNet(nn.Module):
+
+    def __init__(self):
+        super(Net, self).__init__()
+        # 1 input image channel, 6 output channels, 3x3 square convolution
+        # kernel
+        self.conv1 = nn.Conv1d(1, 6, 3)
+        self.conv2 = nn.Conv1d(6, 16, 3)
+
+        self.fc1 = nn.Linear(16 * 6 * 6, 120)  # 6*6 from image dimension
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        # Max pooling over a (2, 2) window
+        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        # If the size is a square you can only specify a single number
+        x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        x = x.view(-1, self.num_flat_features(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]  # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
+
+
+net = Net()
+print(net)
+
+test_string = "MV] IU(아이유) _ BBIBBI(삐삐)"
+test_string_tensor = torch.tensor([ord(char) for char in test_string])
+print(test_string_tensor)

@@ -1,7 +1,14 @@
+# will try to use textblob which is a google translate API that is pretty good,
+# and if it fails it'll use langdetect which can work offline unlike textblob, but is worse
 from langdetect.lang_detect_exception import LangDetectException
 
 from langdetect import detect
 from langdetect import detect_langs
+# https://github.com/Mimino666/langdetect
+from textblob import TextBlob
+# https://textblob.readthedocs.io/en/dev/api_reference.html#textblob.blob.BaseBlob.detect_language
+from googletrans import Translator
+# https://py-googletrans.readthedocs.io/en/latest/
 
 """ stores foreach class p(lang | class), p(class) and also for each lang p(lang) """
 def get_classes_lang_dists(classes_to_titles, absolute=False):
@@ -49,7 +56,7 @@ def get_class_lang_freq_dict(titles, absolute=False):
     if absolute:
         for title in titles:
             try:
-                lang = detect(title)
+                lang = _get_lang_absolute(title)
                 if lang in langs:
                     langs[lang] += 1
                 else:
@@ -64,7 +71,7 @@ def get_class_lang_freq_dict(titles, absolute=False):
     else:
         for title in titles:
             try:
-                possible_langs = detect_langs(title)
+                possible_langs = _get_langs_not_absolute(title)
                 for lang_prob in possible_langs:
                     lang, probability = lang_prob.lang, lang_prob.prob
                     if lang in langs:
@@ -83,6 +90,17 @@ def get_class_lang_freq_dict(titles, absolute=False):
 """ return the language of a title, absolute has the same meaning as above"""
 def get_lang(title, absolute=True):
     if absolute:
+        return _get_lang_absolute(title)
+    else:
+        return _get_langs_not_absolute(title)
+
+""" helper method for get_lang """
+def _get_lang_absolute(title):
+    ### gonna wanna add google api
+    try:
+        b = TextBlob(title)
+        return b.detect_language()
+    except:
         try:
             return detect(title)
         except LangDetectException as e:
@@ -90,11 +108,14 @@ def get_lang(title, absolute=True):
                 return None
             else:
                 raise e
-    else:
-        try:
-            return detect_langs(title)
-        except LangDetectException as e:
-            if "No features in text" in str(e):
-                return None
-            else:
-                raise e
+
+""" helper method for get_lang """
+def _get_langs_not_absolute(title):
+    ### gonna wanna add blob and google API
+    try:
+        return detect_langs(title)
+    except LangDetectException as e:
+        if "No features in text" in str(e):
+            return None
+        else:
+            raise e
