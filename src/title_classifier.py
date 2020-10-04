@@ -5,15 +5,9 @@ from lang_detect import get_classes_lang_dists, get_lang
 from parser import parse_only_title_classes
 from parser import LANGUAGE_DIST_STORE_PATH as dist_path
 
-### move these into the parser please (TODO)
-from os import listdir
-from os.path import isfile, join
-from pathlib import Path
+from cache_manager import rw_most_recent_from_cache as rw
 
-import pickle
-
-from datetime import datetime
-
+# TODO move these into a module for web traffic and stuff
 import json
 import urllib
 
@@ -22,27 +16,9 @@ def init_distributions():
     # initialize lang distributions
     classes_to_titles = parse_only_title_classes()
 
-    #classes_to_lang_dists = get_classes_lang_dists(classes_to_titles, absolute=False)
-    classes_to_lang_dists = None
-    try:
-        to_open_file = dist_path + max(file for file in listdir(dist_path) if isfile(join(dist_path, file)))
-        with open(to_open_file, 'rb') as handle:
-            classes_to_lang_dists = pickle.load(handle)
-            print("found an existing cached distribution")
-    except:
-        print("did not find a cached distribution... creating a new one")
-        classes_to_lang_dists = get_classes_lang_dists(classes_to_titles, absolute=True)
-        now = datetime.now()
-        
-        # will be the same as mkdir -p and won't change directory if already exists
-        # very important that the fikename have the dashes - and not the slashes / or it's a dir that doesn't exist
-        Path(dist_path).mkdir(parents=True, exist_ok=True)
-        to_write_file = dist_path + now.strftime("%m-%d-%Y, %H:%M:%S")
+    create = lambda : get_classes_lang_dists(classes_to_titles, absolute=True)
 
-        with open(to_write_file, 'wb') as handle:
-            pickle.dump(classes_to_lang_dists, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
-    return classes_to_lang_dists
+    return rw(create, dist_path, "language distribution")
 
 """ Given a youtube url, figure out the title and then use classes distributions to figure it out """
 def predict_given_youtube_url(youtube_url, classes_to_lang_dists):

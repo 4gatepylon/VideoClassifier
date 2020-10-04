@@ -11,14 +11,7 @@ from parser import TOKEN_EMBEDDING_STORE_PAREN as embedding_path_paren
 
 from parser import tokenized_class_titles, tokenized_class_titles_by_char, _debug_print
 
-## TODO maybe not parser, but create a module for all this file work
-from os import listdir
-from os.path import isfile, join
-from pathlib import Path
-
-import pickle
-
-from datetime import datetime
+from cache_manager import rw_most_recent_from_cache as rw
 
 """
 here at the top we have some file helpers to write embeddings and other useful information like
@@ -26,41 +19,40 @@ tokenization (caching) and also train embeddings using a basic n-gram model that
 its hyperparameters set up above here
 """
 
-## TODO for both provide an option to flush/ignore older cache store information
-# observe the code in title_classifier that uses the probability distribution
-def init_token_classes(as_list=False):
+""" rw cached token classes """
+def init_token_classes(as_list=True):
+    ## TODO for both provide an option to flush/ignore older cache store information
+    # observe the code in title_classifier that uses the probability distribution
     init = _init_token_classes()
     return list(init) if as_list else init
 
 def _init_token_classes():
     for create, path, _type in [
-        (tokenized_class_titles_by_char, token_path_char, "char"), 
-        (tokenized_class_titles, token_path_paren, "paren")
+        (tokenized_class_titles_by_char, token_path_char, "char tokenization"), 
+        (tokenized_class_titles, token_path_paren, "paren tokenization")
         ]:
-        try:
-            to_open_file = path + max(
-                file for file in listdir(path) if isfile(join(path, file))
-                )
-            with open(to_open_file, 'rb') as handle:
-                class2tokens = pickle.load(handle)
-                print(f"found an existing cached {_type} tokenization")
-        except:
-            print(f"did not find a cached {_type} tokenization... will create one")
-            class2tokens = create()
-            now = datetime.now()
+        yield rw(create, path, _type)
 
-            Path(path).mkdir(parents=True, exist_ok=True)
-            to_write_file = path + now.strftime("%m-%d-%Y, %H:%M:%S")
+""" initialize embeddings by getting token classes using init_token_classes as above and n gram model below """
+def init_embeddings(as_list=True):
+    init = _init_embeddings()
+    return list(init) if as_list else init
 
-            with open(to_write_file, 'wb') as handle:
-                pickle.dump(class2tokens, handle, protocol=pickle.HIGHEST_PROTOCOL)
+def _init_embeddings():
+    # would be nicer to use the generator and generate in the for loop if possible
+    class2tokens = init_token_classes()
+    for create, path, _type in [
+        (create_embeddings(class2tokens[0]), embedding_path_char, "char tokenization"), 
+        (create_embeddings(class2tokens[1]), embedding_path_paren, "paren tokenization")
+        ]:
+        yield rw(create, path, _type)
 
-        yield class2tokens
-
-def init_embeddings():
-    # TODO! (copy as above but use the n gram model below)
-    char_embedding, paren_embedding = None, None
-    return char_embedding, paren_embedding
+""" sneaky wrapper for rw """
+def create_embeddings(info):
+    def no_params_create_embeddings():
+        return info
+    
+    return no_params
 
 if __name__ == "__main__":
     tokenized_by_char, tokenized_by_parens = init_token_classes()
