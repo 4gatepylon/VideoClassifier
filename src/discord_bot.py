@@ -28,5 +28,7 @@ async def p(ctx, *args):
     await ctx.send("class is probably {}".format(predict_given_youtube_url(youtube_url, distributions)))
 
 if __name__ == "__main__":
+    # TODO perhaps read this as an argument or environment variable
+    # this is unsafe (at least take an input() geez)
     token = "NzUzNDg0NDQ5MjY1NjE0ODc5.X1m3Ew.N2Q_t7puH0uZQq0toANdHS19vRM"
     client.run(token)

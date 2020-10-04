@@ -70,7 +70,7 @@ PRE_MAP_IN_STRING_FOR_TOKEN_BY_CHAR = {
     ',' : '',
     '.' : '',
     '?' : '',
-    '|' : '',
+    '|' : ' ',
     '~' : '',
     '\"' : '',
     '\'' : '',
@@ -125,6 +125,20 @@ _SKIP_CHARACTERS = sorted((
     "_",
     " -",
     "- ",
+    "一",
+    "-", # questionable!
+), key=lambda char : len(char), reverse=True)
+
+# here we want characters
+_SKIP_CHARACTERS_FOR_CHAR = sorted((
+    "\n",
+    "\t",
+    "\"",
+    "'",
+    ".",
+    ",",
+    ";",
+    "_",
     "一",
     "-", # questionable!
 ), key=lambda char : len(char), reverse=True)
@@ -219,7 +233,7 @@ def title_tokenize_by_char(title, as_list=True):
     tokenized = _title_tokenize_by_char(title)
     return list(tokenized) if as_list else tokenized
 
-def _title_tokenize_by_char(title, skip_characters=_SKIP_CHARACTERS):
+def _title_tokenize_by_char(title, skip_characters=_SKIP_CHARACTERS_FOR_CHAR):
     i = 0
     while i < len(title):
         skip_match = _skip_match(title, i, skip_characters)
