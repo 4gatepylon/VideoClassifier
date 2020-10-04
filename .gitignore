@@ -1,5 +1,7 @@
 # Project-specific blocks
 cache/
+# pretrained will be made public in another branch
+pretrained/ 
 
 # Generic gitignore blocks
 .DS_Store

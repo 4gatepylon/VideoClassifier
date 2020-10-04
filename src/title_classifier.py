@@ -12,15 +12,20 @@ import json
 import urllib
 
 """ Initialize and return the distribution data. """
+
+
 def init_distributions():
     # initialize lang distributions
     classes_to_titles = parse_only_title_classes()
 
-    create = lambda : get_classes_lang_dists(classes_to_titles, absolute=True)
+    create = lambda: get_classes_lang_dists(classes_to_titles, absolute=True)
 
     return rw(create, dist_path, "language distribution")
 
+
 """ Given a youtube url, figure out the title and then use classes distributions to figure it out """
+
+
 def predict_given_youtube_url(youtube_url, classes_to_lang_dists):
     # more answers: https://stackoverflow.com/questions/8738916/how-to-extract-the-title-of-a-youtube-video-using-python
     # but this is gotten from https://stackoverflow.com/questions/1216029/get-title-from-youtube-videos
@@ -30,15 +35,21 @@ def predict_given_youtube_url(youtube_url, classes_to_lang_dists):
     # must be in the v= format not sure if you can also do videoid or what, also must not have playlist etc
     VideoID = youtube_url.split("v=")[-1]
 
-    params = {'id': VideoID, 'key': APIKEY,
-            'fields': 'items(id,snippet(channelId,title,categoryId),statistics)',
-            'part': 'snippet,statistics'}
+    params = {
+        "id": VideoID,
+        "key": APIKEY,
+        "fields": "items(id,snippet(channelId,title,categoryId),statistics)",
+        "part": "snippet,statistics",
+    }
 
-    params = {'id': VideoID, 'key': APIKEY,
-          'fields': 'items(id,snippet(channelId,title,categoryId),statistics)',
-          'part': 'snippet,statistics'}
+    params = {
+        "id": VideoID,
+        "key": APIKEY,
+        "fields": "items(id,snippet(channelId,title,categoryId),statistics)",
+        "part": "snippet,statistics",
+    }
 
-    url = 'https://www.googleapis.com/youtube/v3/videos'
+    url = "https://www.googleapis.com/youtube/v3/videos"
 
     query_string = urllib.parse.urlencode(params)
     url = url + "?" + query_string
@@ -47,28 +58,38 @@ def predict_given_youtube_url(youtube_url, classes_to_lang_dists):
     try:
         with urllib.request.urlopen(url) as response:
             response_text = response.read()
-            data = json.loads(response_text.decode()) # can use pprint to print it nicely
-            title = data['items'][0]['snippet']['title']
+            data = json.loads(
+                response_text.decode()
+            )  # can use pprint to print it nicely
+            title = data["items"][0]["snippet"]["title"]
     except Exception as e:
-        return 'yea nevermind i fuckin crashed fuck this shit look here:\n{}'.format(str(e))
-    
+        return "yea nevermind i fuckin crashed fuck this shit look here:\n{}".format(
+            str(e)
+        )
+
     if title is None:
         return "unknown"
     else:
         _lang = get_lang(title)
         best_class, probability = None, 0
         for _class in classes_to_lang_dists["classes"].keys():
-            class_probability = probability_class_given_lang(_class, _lang, classes_to_lang_dists)
+            class_probability = probability_class_given_lang(
+                _class, _lang, classes_to_lang_dists
+            )
             if class_probability > probability:
                 best_class, probability = _class, class_probability
         return "unknown" if best_class is None else best_class
+
 
 """ Optional testing! """
 
 tests = [
     ("HAPPY 420 Thomas The Tank Engine Weed Remix SnoopDogg", "misc"),
     ("Krewella Surrender The Throne", "misc"),
-    ("RISE ft. The Glitch Mob, Mako, and The Word Alive Worlds 2018 League of Legends", "misc"),
+    (
+        "RISE ft. The Glitch Mob, Mako, and The Word Alive Worlds 2018 League of Legends",
+        "misc",
+    ),
     ("Lovesickness", "misc"),
     ("東方ボーカル 螺旋絶望 豚乙女", "touhou"),
     ("Zenmai Koi Tokei (T.E.B Summer Mix) 【Touhou Eurobeat】", "touhou"),
@@ -94,6 +115,8 @@ tests = [
 ]
 
 """ probability of a class given a language """
+
+
 def probability_class_given_lang(_class, lang, distributions):
     # p (class | lang) = p(lang | class) * p(class) / p(lang)
     # p(lang | class) get from the distribution
@@ -105,7 +128,9 @@ def probability_class_given_lang(_class, lang, distributions):
     dist_distributions_class = distributions["distributions"][_class]
     class_distributions = distributions["classes"]
 
-    p_lang_given_class = dist_distributions_class[lang] if lang in dist_distributions_class else 0
+    p_lang_given_class = (
+        dist_distributions_class[lang] if lang in dist_distributions_class else 0
+    )
     p_class = class_distributions[_class] if _class in class_distributions else 0
     p_lang = lang_distributions[lang] if lang in lang_distributions else 0
 
@@ -114,6 +139,7 @@ def probability_class_given_lang(_class, lang, distributions):
     # else
     return p_lang_given_class * p_class / p_lang
 
+
 def test(tests, classes_to_lang_dists):
     classes = classes_to_lang_dists["classes"].keys()
 
@@ -121,25 +147,35 @@ def test(tests, classes_to_lang_dists):
     for title, target in tests:
         print("title is {}".format(title))
 
-        #langs = get_lang(title, absolute=False)
+        # langs = get_lang(title, absolute=False)
         _lang = get_lang(title, absolute=True)
         lang = _lang
         best_class, probability = None, 0
         for _class in classes:
-            #class_probability = 0
-            class_probability = probability_class_given_lang(_class, _lang, classes_to_lang_dists)
+            # class_probability = 0
+            class_probability = probability_class_given_lang(
+                _class, _lang, classes_to_lang_dists
+            )
             # for lang_prob in langs:
             #     lang, lang_probability = lang_prob.lang, lang_prob.prob
             #     class_probability += lang_probability * probability_class_given_lang(_class, lang, classes_to_lang_dists)
-            
-            print("probability of {} is {} since languages are {}".format(_class, class_probability, lang))
+
+            print(
+                "probability of {} is {} since languages are {}".format(
+                    _class, class_probability, lang
+                )
+            )
 
             ### another option here is to try a mean squared error from the distribution
             if class_probability > probability:
                 best_class, probability = _class, class_probability
-        
-        print("class expected to be {}, while it should be {}\n".format(best_class, target))
+
+        print(
+            "class expected to be {}, while it should be {}\n".format(
+                best_class, target
+            )
+        )
         if target == best_class:
             correct += 1
 
-    print("accuracy was {}".format(correct / len(tests))) 
+    print("accuracy was {}".format(correct / len(tests)))

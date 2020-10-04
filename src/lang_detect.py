@@ -9,18 +9,23 @@ from langdetect.lang_detect_exception import LangDetectException
 
 from langdetect import detect
 from langdetect import detect_langs
+
 # https://github.com/Mimino666/langdetect
 from textblob import TextBlob
+
 # https://textblob.readthedocs.io/en/dev/api_reference.html#textblob.blob.BaseBlob.detect_language
 from googletrans import Translator
+
 # https://py-googletrans.readthedocs.io/en/latest/
 
 """ stores foreach class p(lang | class), p(class) and also for each lang p(lang) """
+
+
 def get_classes_lang_dists(classes_to_titles, absolute=False):
     distributions = {
-        "distributions" : {},
-        "languages" : {None : 0},
-        "classes" : {},
+        "distributions": {},
+        "languages": {None: 0},
+        "classes": {},
     }
 
     lang_distributions = distributions["languages"]
@@ -37,7 +42,7 @@ def get_classes_lang_dists(classes_to_titles, absolute=False):
                 lang_distributions[lang] += amount
             else:
                 lang_distributions[lang] = amount
-            
+
             distribution[lang] /= class_total
 
         # update the total # of samples so we can use it to calculate p(class) and p(lang)
@@ -50,12 +55,15 @@ def get_classes_lang_dists(classes_to_titles, absolute=False):
         class_distributions[_class] /= total
     for lang in lang_distributions.keys():
         lang_distributions[lang] /= total
-    
+
     return distributions
 
+
 """ get the language freq map of a certain, absolute will += 1 for most likely, but no absolute will += each likelihood """
+
+
 def get_class_lang_freq_dict(titles, absolute=False):
-    langs = {None : 0}
+    langs = {None: 0}
     total = 0
 
     if absolute:
@@ -92,14 +100,20 @@ def get_class_lang_freq_dict(titles, absolute=False):
                     raise e
     return langs, total
 
+
 """ return the language of a title, absolute has the same meaning as above"""
+
+
 def get_lang(title, absolute=True):
     if absolute:
         return _get_lang_absolute(title)
     else:
         return _get_langs_not_absolute(title)
 
+
 """ helper method for get_lang """
+
+
 def _get_lang_absolute(title):
     ### gonna wanna add google api
     try:
@@ -114,7 +128,10 @@ def _get_lang_absolute(title):
             else:
                 raise e
 
+
 """ helper method for get_lang """
+
+
 def _get_langs_not_absolute(title):
     ### gonna wanna add blob and google API
     try:
