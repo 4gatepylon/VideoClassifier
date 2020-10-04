@@ -168,15 +168,36 @@ def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
     
     # some "visualization"
     if debug:
+        # what are the titles and stuff
         for _class, titles in class_titles_tokens.items():
             for title in titles:
                 print(title)
                 for token in title:
                     print(f"\t{token}")
         print("\n")
+
+        # how much token overlap do we have? let's look at the token count
+        tokens = {}
+        for titles in class_titles_tokens.values():
+            for title in titles:
+                for token in title:
+                    if token in tokens:
+                        tokens[token] += 1
+                    else:
+                        tokens[token] = 1
+        tokens = sorted(
+            [(token, count) for token, count in tokens.items()], 
+                key=lambda tv : tv[1], 
+                reverse=False # for the print because it's long
+            )
+        for token, count in tokens:
+            print(f"{token} -> {count}")
+        print("\n")
+
+        # how many titles do we have per
         for _class, titles in class_titles_tokens.items():
             print(f"{_class} -> {len(titles)}")
-
+        
     return class_titles_tokens
 
 def _map_tokens(title, as_list=True, remove_chars=_OVERRIDE_REMOVE_CHARS):
