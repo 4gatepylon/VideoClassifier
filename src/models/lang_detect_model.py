@@ -18,6 +18,92 @@ from googletrans import Translator
 
 # https://py-googletrans.readthedocs.io/en/latest/
 
+import urllib
+import json
+
+""" Given a youtube url, figure out the title and then use classes distributions to figure it out """
+
+
+def predict_given_youtube_url(youtube_url, classes_to_lang_dists, api_key):
+    # more answers: https://stackoverflow.com/questions/8738916/how-to-extract-the-title-of-a-youtube-video-using-python
+    # but this is gotten from https://stackoverflow.com/questions/1216029/get-title-from-youtube-videos
+    # for some reason no api key gets me error 61 connection refused
+
+    # must be in the v= format not sure if you can also do videoid or what, also must not have playlist etc
+    VideoID = youtube_url.split("v=")[-1]
+
+    params = {
+        "id": VideoID,
+        "key": api_key,
+        "fields": "items(id,snippet(channelId,title,categoryId),statistics)",
+        "part": "snippet,statistics",
+    }
+
+    params = {
+        "id": VideoID,
+        "key": api_key,
+        "fields": "items(id,snippet(channelId,title,categoryId),statistics)",
+        "part": "snippet,statistics",
+    }
+
+    url = "https://www.googleapis.com/youtube/v3/videos"
+
+    query_string = urllib.parse.urlencode(params)
+    url = url + "?" + query_string
+
+    title = None
+    try:
+        with urllib.request.urlopen(url) as response:
+            response_text = response.read()
+            data = json.loads(
+                response_text.decode()
+            )  # can use pprint to print it nicely
+            title = data["items"][0]["snippet"]["title"]
+    except Exception as e:
+        return "yea nevermind i fuckin crashed fuck this shit look here:\n{}".format(
+            str(e)
+        )
+
+    if title is None:
+        return "unknown"
+    else:
+        _lang = get_lang(title)
+        best_class, probability = None, 0
+        for _class in classes_to_lang_dists["classes"].keys():
+            class_probability = probability_class_given_lang(
+                _class, _lang, classes_to_lang_dists
+            )
+            if class_probability > probability:
+                best_class, probability = _class, class_probability
+        return "unknown" if best_class is None else best_class
+
+
+""" probability of a class given a language """
+
+
+def probability_class_given_lang(_class, lang, distributions):
+    # p (class | lang) = p(lang | class) * p(class) / p(lang)
+    # p(lang | class) get from the distribution
+    # p(class) get from the distribution too (i.e. calculated from the total sizes of each class)
+
+    # p(lang) = sum(p(lang | class) * p(class)) for all classes = # lang_class / # class * # class / # total summed
+    # = # lang_class / # total summed over all classes = # total for a lang / # total for all langs
+    lang_distributions = distributions["languages"]
+    dist_distributions_class = distributions["distributions"][_class]
+    class_distributions = distributions["classes"]
+
+    p_lang_given_class = (
+        dist_distributions_class[lang] if lang in dist_distributions_class else 0
+    )
+    p_class = class_distributions[_class] if _class in class_distributions else 0
+    p_lang = lang_distributions[lang] if lang in lang_distributions else 0
+
+    if p_lang == 0:
+        return 0
+    # else
+    return p_lang_given_class * p_class / p_lang
+
+
 """ stores foreach class p(lang | class), p(class) and also for each lang p(lang) """
 
 
