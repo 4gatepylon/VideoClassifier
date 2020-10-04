@@ -1,3 +1,12 @@
+"""
+Somewhat simple parser and tokenizer for various models I use throughout the bot.
+
+Unfortunately some of the tokenizer code might be a bit annoying. There is a pre-remove map and filter
+before tokenizing and also a post-tokenizing, but it's not well organized and maybe a bit hard to follow.
+
+Next time maybe design for like five minutes idk.
+"""
+
 # from youtube thumbnail/image download tutorial
 import requests # to get image from the web
 import shutil # to save it locally
@@ -29,6 +38,23 @@ MISCELLANEOUS_STORE_PATH = STORE_PATH + "misc/"
 LANGUAGE_DIST_STORE_PATH = MISCELLANEOUS_STORE_PATH + "language-distributions/"
 
 ### parsing constants
+PRE_MAP_IN_STRING = {
+    ',' : '',
+    '.' : '',
+    '?' : '',
+    '|' : '',
+    '~' : '',
+    '\"' : '',
+    '\'' : '',
+    '・' : '',
+    '\u3000' : '',
+    '┃' : ' ',
+    '！' : '',
+    '。' : '',
+    '/' : ' ',
+    '-' : ' ',
+}
+
 _CLOSE_PARENS = {
     ')' : '(',
     ']' : '[',
@@ -36,6 +62,8 @@ _CLOSE_PARENS = {
     '】' : '【', 
     '〕' : '〔',
     '）' : '（',
+    '」' : '「',
+    '』' : '『',
 }
 # inverted
 _OPEN_PARENS = {val : key for key, val in _CLOSE_PARENS.items()}
@@ -44,12 +72,42 @@ _SKIP_CHARACTERS = sorted((
     " ",
     "\n",
     "\t",
+    "\"",
+    "'",
     " - ",
     ".",
     ",",
     ";",
     "_",
+    " -",
+    "- ",
+    "一",
+    "-", # questionable!
 ), key=lambda char : len(char), reverse=True)
+
+_OVERRIDE_REMOVE_TOKENS = {'~', 'L', ':', '|', '?', '!'}
+_OVERRIDE_REMOVE_CHARS = {
+    ')',
+    '(',
+    ']',
+    '[',
+    '}',
+    '{',
+    '】',
+    '【',
+    '〕',
+    '〔',
+    '）',
+    '（',
+    '」',
+    '「',
+    ',',
+    '.',
+    '?',
+    '|',
+    '~'
+}
+
 
 ###
 ### parse/data acquisition code
@@ -63,7 +121,7 @@ def parse_only_title_raw(filename=RAW_FILE, path=ONLY_TITLES_PATH):
         for _line in file.readlines():
             _, line = _line.split("00,") # the length of the file is 1979 and this is the only working separator
             title = line.strip("\n").strip(".webm").strip("m4a").strip()
-            print(line, title)
+            print(line, title) # TODO
             titles.append(title)
     return titles
 
@@ -94,18 +152,66 @@ def parse_full_data_raw(filename=RAW_FILE, path=FULL_DATA_PATH):
 """ below are various filters for filtering data """
 
 """ generate the tokenized class titles for al the classes and titles which we parse """
-def tokenized_class_titles(path=CLASSES_PATH):
+def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
     class_titles = parse_only_title_classes(path=path)
 
     class_titles_tokens = {_class : [] for _class in class_titles.keys()}
     for _class, titles in class_titles.items():
-            class_titles_tokens[_class] = titles_tokenize(filter_titles(titles))
+            class_titles_tokens[_class] = titles_tokenize(_map_titles(_filter_titles(titles)))
+    
+    # WARNING! if filter_short this will activate, but it is absolutely essential that they be lists!
+    # that is assumed as a precondition
+    if filter_short:
+        for titles in class_titles_tokens.values():
+            for i in range(len(titles)):
+                titles[i] = _map_tokens(_filter_tokens(titles[i]))
+    
+    # some "visualization"
+    if debug:
+        for _class, titles in class_titles_tokens.items():
+            for title in titles:
+                print(title)
+                for token in title:
+                    print(f"\t{token}")
+        print("\n")
+        for _class, titles in class_titles_tokens.items():
+            print(f"{_class} -> {len(titles)}")
 
     return class_titles_tokens
 
+def _map_tokens(title, as_list=True, remove_chars=_OVERRIDE_REMOVE_CHARS):
+    mapped = map(
+        lambda token : "".join(map(
+            lambda char : "" if char in remove_chars else char,
+            token
+        )),
+        title
+    )
+    return list(mapped) if as_list else mapped
+
+def _filter_tokens(title, as_list=True, remove_tokens=_OVERRIDE_REMOVE_TOKENS):
+    TOO_SHORT = 2
+    filtered = filter(
+        lambda token : not (len(token) <= TOO_SHORT and (
+                token in remove_tokens or not _is_single_character_token(token)
+            )), 
+        title
+    )
+    return list(filtered) if as_list else filtered
+
 
 """ generator of non-empty titles """
-def filter_titles(titles, as_list=True):
+def _map_titles(titles, as_list=True, pre_map_chars=PRE_MAP_IN_STRING):
+    mapped = map(
+        lambda title : "".join(map(
+            lambda char : pre_map_chars[char] if char in pre_map_chars else char,
+            title
+        )),
+        titles
+    )
+    return list(mapped) if as_list else mapped
+
+def _filter_titles(titles, as_list=True):
     out = filter(lambda title : not (_is_only_whitespace(title) or _has_bad_parens(title)), titles)
     return list(out) if as_list else out
 
@@ -115,22 +221,24 @@ def _is_only_whitespace(title, whitespaces=(" ", "\t", "\n")):
             return False
     return True
 
-def _has_bad_parens(title, close_parens=_CLOSE_PARENS):
-    parens = {
-        '(' : 0,
-        '[' : 0,
-        '{' : 0,
-        '【' : 0, 
-        '〔' : 0,
-        '（': 0,
-    }
+# changed to allow for only one level of nesting
+def _has_bad_parens(title, close_parens=_CLOSE_PARENS, open_parens=_OPEN_PARENS):
+    parens = {paren : 0 for paren in open_parens}
+    found = False
     for char in title:
         if char in parens:
+            if found:
+                return True
+            # else
             parens[char] += 1
+            found = True
         elif char in close_parens:
             parens[close_parens[char]] -= 1
-            if parens[close_parens[char]] < 0:
+            p = parens[close_parens[char]]
+            # want only one level of nesting honestly
+            if p < 0 or p > 1:
                 return True
+            found = False
     for val in parens.values():
         if val != 0:
             return True
@@ -156,13 +264,18 @@ def _title_tokenize(title, skip_characters=_SKIP_CHARACTERS, open_parens=_OPEN_P
     start = None # the beginning of this token
     captured = None # inside some form of parens (will indicate the starting)
     captured_count = 0
-    while i < len(title):
+    while True:
+        if i == len(title):
+            if not start is None:
+                yield title[start : i]
+            break
+
         skip_match = _skip_match(title, i, skip_characters)
         if skip_match:
             if captured:
                 i += 1
             else:
-                if start:
+                if not start is None:
                     yield title[start : i] # this is a string
                     start = None
                 i += skip_match
@@ -174,19 +287,24 @@ def _title_tokenize(title, skip_characters=_SKIP_CHARACTERS, open_parens=_OPEN_P
                     captured_count -= 1
                     if captured_count == 0:
                         captured = None
+                        # necessary because we may not have a skip after
+                        yield title[start : i + 1] # this is a string
+                        start = None
                 
                 elif char == captured:
                     captured_count += 1
             
-            elif not captured:
+            else:
                 if char in open_parens:
+                    if not start is None:
+                        yield title[start : i]
+                        start = None
                     captured = char
                     captured_count += 1
-                    # this should then be caught by the not start and then start should be i
-            
-                if _is_single_character_token(char):
+                    # this should then be caught by the start is None and then start should be i
+                if _is_single_character_token(char, avoid=(open_parens, close_parens)):
                     yield char
-                elif not start:
+                elif start is None:
                     start = i
             i += 1
 
@@ -194,20 +312,24 @@ def _title_tokenize(title, skip_characters=_SKIP_CHARACTERS, open_parens=_OPEN_P
 # https://stackoverflow.com/questions/6088241/is-there-a-way-to-check-whether-unicode-text-is-in-a-certain-language
 # https://stackoverflow.com/questions/2856942/how-to-check-if-the-word-is-japanese-or-english-using-php
 # https://unicode-table.com/en/#basic-latin
-def _is_single_character_token(char):
+def _is_single_character_token(char, avoid=None):
     # assume utf8 I think
+    if len(char) != 1:
+        return False
 
     # kanji
-    start1 = 0x2e80
-    end1 = 0x2fe0
+    start = 0x2e80
 
     # hanzi I think
-    start2 = 0x3400
-    end2= 0x9fd6
+    # start_hanzi = 0x3400
+    end= 0x9fd6
 
     o = ord(char)
-
-    return start1 <= o and o <= end1 or start2 <= o and o <= end2
+    if not avoid is None:
+        for avoid_set in avoid:
+            if char in avoid_set:
+                return False
+    return start<= o and o <= end
 
 def _skip_match(title, i, skip_characters):
     t = len(title)
@@ -239,11 +361,6 @@ def download_image(url, path):
     else:
         return None
 
+
 if __name__ == "__main__":
-    class_titles_tokens = tokenized_class_titles()
-    for _class, titles in class_titles_tokens.items():
-        for title in titles:
-            print(title)
-            for token in title:
-                print(f"\t{token}")
-            print("\n")
+    class_titles_tokens = tokenized_class_titles(debug=True)
