@@ -1,4 +1,6 @@
-from models.lang_detect_model import predict_given_youtube_url
+from models.lang_detect_model import probability_class_given_lang, get_lang
+
+from title_classifier import init_lang_distributions
 
 tests = [
         ("HAPPY 420 Thomas The Tank Engine Weed Remix SnoopDogg", "misc"),
@@ -31,7 +33,7 @@ tests = [
         ("[MV] IU(아이유) _ BBIBBI(삐삐).webm", "kpop"),
     ]
 
-def test(tests, classes_to_lang_dists, api_key):
+def test(tests, classes_to_lang_dists):
     classes = classes_to_lang_dists["classes"].keys()
 
     # TODO this should be its own method! in models.lang_detect_model
@@ -72,3 +74,7 @@ def test(tests, classes_to_lang_dists, api_key):
             correct += 1
 
     print("accuracy was {}".format(correct / len(tests)))
+
+if __name__ == "__main__":
+    class2lang_dist = init_lang_distributions()
+    test(tests, class2lang_dist)

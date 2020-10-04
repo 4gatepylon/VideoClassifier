@@ -10,7 +10,7 @@ from parser import LANGUAGE_DIST_STORE_PATH as dist_path
 """ Initialize and return the distribution data. """
 
 
-def init_distributions():
+def init_lang_distributions():
     # initialize lang distributions
     classes_to_titles = parse_only_title_classes()
 

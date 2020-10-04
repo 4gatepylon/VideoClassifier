@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 from models.lang_detect_model import predict_given_youtube_url
-from title_classifier import init_distributions
+from title_classifier import init_lang_distributions
 
 # programmed to react to Rythm bot requests like this:
 #!p https://www.youtube.com/watch?v=Wuh_FcfCTfw
@@ -25,7 +25,7 @@ api_key = None
 @client.event
 async def on_ready():
     global distributions, api_key
-    distributions = init_distributions()
+    distributions = init_lang_distributions()
     print("Starting shitpost detector!")
 
 
