@@ -35,7 +35,18 @@ CONFIRMED_STORE_PATH = STORE_PATH + "confirmed/"
 ### also useful for things like the language distributions which probably won't be used that much
 MISCELLANEOUS_STORE_PATH = STORE_PATH + "misc/"
 
+# used for our earliest model that kind of sucks
 LANGUAGE_DIST_STORE_PATH = MISCELLANEOUS_STORE_PATH + "language-distributions/"
+
+# storing class : tokenized sentences dict to save on compute (good as we scale with more data too)
+TOKEN_MAP_STORE_PATH = MISCELLANEOUS_STORE_PATH + "token-stores/"
+TOKEN_MAP_STORE_PATH_CHAR = TOKEN_MAP_STORE_PATH + "by-char/"
+TOKEN_MAP_STORE_PATH_PAREN = TOKEN_MAP_STORE_PATH + "by-paren/"
+
+# embeddings that we use as our token2vec for training
+TOKEN_EMBEDDING_STORE_PATH = PRETRAINED_PATH + "token-embeddings/"
+TOKEN_EMBEDDING_STORE_PATH_CHAR = TOKEN_EMBEDDING_STORE_PATH + "by-char/" # every char on its own
+TOKEN_EMBEDDING_STORE_PAREN = TOKEN_EMBEDDING_STORE_PATH + "by-paren/" # chinese, japanese, words, parens
 
 ### parsing constants
 PRE_MAP_IN_STRING = {

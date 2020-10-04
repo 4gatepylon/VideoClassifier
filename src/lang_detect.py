@@ -1,3 +1,8 @@
+"""
+simple probabilistic model (no learning) that tries to use an off-the-shelf language detector
+to infer which distribution a title was drawn from (where each class is a language distribution)
+"""
+
 # will try to use textblob which is a google translate API that is pretty good,
 # and if it fails it'll use langdetect which can work offline unlike textblob, but is worse
 from langdetect.lang_detect_exception import LangDetectException

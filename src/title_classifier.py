@@ -5,7 +5,7 @@ from lang_detect import get_classes_lang_dists, get_lang
 from parser import parse_only_title_classes
 from parser import LANGUAGE_DIST_STORE_PATH as dist_path
 
-### move these into the parser please
+### move these into the parser please (TODO)
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
