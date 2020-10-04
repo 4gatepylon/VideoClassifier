@@ -55,6 +55,39 @@ PRE_MAP_IN_STRING = {
     '-' : ' ',
 }
 
+PRE_MAP_IN_STRING_FOR_TOKEN_BY_CHAR = {
+    ',' : '',
+    '.' : '',
+    '?' : '',
+    '|' : '',
+    '~' : '',
+    '\"' : '',
+    '\'' : '',
+    '・' : '',
+    '\u3000' : '',
+    '┃' : ' ',
+    '！' : '',
+    '。' : '',
+    '/' : ' ',
+    '-' : ' ',
+    ')' : ' ',
+    '(' : ' ',
+    ']' : ' ',
+    '[' : ' ',
+    '}' : ' ',
+    '{' : ' ',
+    '】' : ' ',
+    '【' : ' ', 
+    '〕' : ' ',
+    '〔' : ' ',
+    '）' : ' ',
+    '（' : ' ',
+    '」' : ' ',
+    '「' : ' ',
+    '』' : ' ',
+    '『' : ' ',
+}
+
 _CLOSE_PARENS = {
     ')' : '(',
     ']' : '[',
@@ -151,6 +184,38 @@ def parse_full_data_raw(filename=RAW_FILE, path=FULL_DATA_PATH):
 
 """ below are various filters for filtering data """
 
+""" similar to it's older brother below (generate by grouping meaningful groups) """
+def tokenized_class_titles_by_char(path=CLASSES_PATH, debug=False):
+    class_titles = parse_only_title_classes(path=path)
+
+    class_titles_tokens = {_class : [] for _class in class_titles.keys()}
+    for _class, titles in class_titles.items():
+            class_titles_tokens[_class] = titles_tokenize_by_char(
+                _map_titles(_filter_titles(titles), pre_map_chars=PRE_MAP_IN_STRING_FOR_TOKEN_BY_CHAR)
+            )
+    # some "visualization"
+    if debug:
+        _debug_print(class_titles_tokens)
+    
+    return class_titles_tokens
+    
+""" equivalent, but for chars, to their older brothers near the bottom of the code... yikes! """
+def titles_tokenize_by_char(titles, as_list=True):
+    out = map(lambda title : title_tokenize_by_char(title), titles)
+    return list(out) if as_list else out
+
+def title_tokenize_by_char(title, as_list=True):
+    tokenized = _title_tokenize_by_char(title)
+    return list(tokenized) if as_list else tokenized
+
+def _title_tokenize_by_char(title, skip_characters=_SKIP_CHARACTERS):
+    i = 0
+    while i < len(title):
+        skip_match = _skip_match(title, i, skip_characters)
+        if not skip_match:
+            yield title[i]
+        i += skip_match if not skip_match is None else 1
+
 """ generate the tokenized class titles for al the classes and titles which we parse """
 def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
     class_titles = parse_only_title_classes(path=path)
@@ -168,38 +233,43 @@ def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
     
     # some "visualization"
     if debug:
-        # what are the titles and stuff
-        for _class, titles in class_titles_tokens.items():
-            for title in titles:
-                print(title)
-                for token in title:
-                    print(f"\t{token}")
-        print("\n")
-
-        # how much token overlap do we have? let's look at the token count
-        tokens = {}
-        for titles in class_titles_tokens.values():
-            for title in titles:
-                for token in title:
-                    if token in tokens:
-                        tokens[token] += 1
-                    else:
-                        tokens[token] = 1
-        tokens = sorted(
-            [(token, count) for token, count in tokens.items()], 
-                key=lambda tv : tv[1], 
-                reverse=False # for the print because it's long
-            )
-        for token, count in tokens:
-            print(f"{token} -> {count}")
-        print("\n")
-
-        # how many titles do we have per
-        for _class, titles in class_titles_tokens.items():
-            print(f"{_class} -> {len(titles)}")
+        _debug_print(class_titles_tokens)
         
     return class_titles_tokens
 
+""" helper used in both to help provide information if things are bad """
+def _debug_print(class_titles_tokens):
+    # what are the titles and stuff
+    for _class, titles in class_titles_tokens.items():
+        for title in titles:
+            print(title)
+            for token in title:
+                print(f"\t{token}")
+    print("\n")
+
+    # how much token overlap do we have? let's look at the token count
+    tokens = {}
+    for titles in class_titles_tokens.values():
+        for title in titles:
+            for token in title:
+                if token in tokens:
+                    tokens[token] += 1
+                else:
+                    tokens[token] = 1
+    tokens = sorted(
+        [(token, count) for token, count in tokens.items()], 
+            key=lambda tv : tv[1], 
+            reverse=False # for the print because it's long
+        )
+    for token, count in tokens:
+        print(f"{token} -> {count}")
+    print("\n")
+
+    # how many titles do we have per
+    for _class, titles in class_titles_tokens.items():
+        print(f"{_class} -> {len(titles)}")
+
+""" helper for post-process of tokens after they are created """
 def _map_tokens(title, as_list=True, remove_chars=_OVERRIDE_REMOVE_CHARS):
     mapped = map(
         lambda token : "".join(map(
@@ -221,7 +291,7 @@ def _filter_tokens(title, as_list=True, remove_tokens=_OVERRIDE_REMOVE_TOKENS):
     return list(filtered) if as_list else filtered
 
 
-""" generator of non-empty titles """
+""" generator of non-empty titles as well as those that have proper parenthesization """
 def _map_titles(titles, as_list=True, pre_map_chars=PRE_MAP_IN_STRING):
     mapped = map(
         lambda title : "".join(map(
@@ -384,4 +454,6 @@ def download_image(url, path):
 
 
 if __name__ == "__main__":
-    class_titles_tokens = tokenized_class_titles(debug=True)
+    #class_titles_tokens = tokenized_class_titles(debug=True)
+    #lass_titles_tokens = tokenized_class_titles_by_char(debug=True)
+    pass
