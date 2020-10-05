@@ -25,3 +25,5 @@ I intend to roll out the initial version with only title and maybe thumbnail/aud
 Make sure to check whether title token n-grams and cbows overlap! If they are too long for a title they should NOT overlap.
 
 Focus on 2.
+
+Please add spoiler tags to the bot!
