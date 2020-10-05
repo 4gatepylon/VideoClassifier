@@ -22,6 +22,7 @@ distributions = None
 
 api_key = None
 
+
 @client.event
 async def on_ready():
     global distributions, api_key
@@ -46,10 +47,10 @@ async def p(ctx, *args):
 """ basic terminal launch code """
 
 if __name__ == "__main__":
-    dotenv_path = join(dirname(__file__), '.env')
+    dotenv_path = join(dirname(__file__), ".env")
     load_dotenv(dotenv_path)
 
-    api_key = os.getenv('YOUTUBE_API_KEY')
-    token = os.getenv('DISCORD_TOKEN')
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    token = os.getenv("DISCORD_TOKEN")
 
     client.run(token)

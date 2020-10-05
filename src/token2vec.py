@@ -94,6 +94,7 @@ class NGramLanguageModeler(nn.Module):
     def embedding_for(self, token, transform=None):
         return self.embeddings(token if transform is None else transform(token))
 
+
 class CBOW(nn.Module):
 
     # cbow_size includes middle to context size is cbow_size // 2 on each side (it's odd)
@@ -109,7 +110,7 @@ class CBOW(nn.Module):
         out = self.linear2(out)
         log_probs = F.log_softmax(out, dim=1)
         return log_probs
-    
+
     def embedding_dictionary(self, tokens, transform=None, key_transform=False):
         if key_transform:
             return (
@@ -129,6 +130,7 @@ class CBOW(nn.Module):
 
     def embedding_for(self, token, transform=None):
         return self.embeddings(token if transform is None else transform(token))
+
 
 """
 here we have some file helpers to write embeddings and other useful information like
@@ -204,15 +206,17 @@ def create_embeddings_cbow(
     lr=LEARNING_RATE_CBOW,
     use_pretrained=True,
 ):
-    cbows = _map_class2tokens_to_cbows(class2tokens) # TODO
+    cbows = _map_class2tokens_to_cbows(class2tokens)  # TODO
 
-    vocab = _generate_vocab(cbows) # this can be shared by both cbows and ngrams
+    vocab = _generate_vocab(cbows)  # this can be shared by both cbows and ngrams
 
     token2ix = {word: i for i, word in enumerate(vocab)}
 
     if CBOW_SIZE % 2 == 0:
-        raise ValueError("Cannot have even CBOW_SIZE... it has to be odd so that the left and right are each equal with the target in the middle.")
-    
+        raise ValueError(
+            "Cannot have even CBOW_SIZE... it has to be odd so that the left and right are each equal with the target in the middle."
+        )
+
     if use_pretrained:
         try:
             model = load_model(path)
@@ -232,22 +236,28 @@ def create_embeddings_cbow(
 
         total_loss = 0
         for cbow in some_items(batch_size, cbows):
-            target = cbow[len(cbow) // 2] # i.e. 1 2 3 4 5 -> want 3 5 // 2 = 2 wich is right in zero indexing
+            target = cbow[
+                len(cbow) // 2
+            ]  # i.e. 1 2 3 4 5 -> want 3 5 // 2 = 2 wich is right in zero indexing
             context = _cbow_context(cbow)
 
-            context_idxs = torch.tensor([token2ix[w] for w in context], dtype=torch.long)
+            context_idxs = torch.tensor(
+                [token2ix[w] for w in context], dtype=torch.long
+            )
 
             model.zero_grad()
             log_probs = model(context_idxs)
 
-            loss = loss_function(log_probs, torch.tensor([token2ix[target]], dtype=torch.long))
+            loss = loss_function(
+                log_probs, torch.tensor([token2ix[target]], dtype=torch.long)
+            )
 
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
         losses.append(total_loss)
-    
+
     print("finished training n-gram based token2vec (from the batch size)")
     for i in range(len(losses)):
         print(f"\tloss in epoch {i} was {losses[i]}")
@@ -264,13 +274,16 @@ def create_embeddings_cbow(
 
     return embeddings, _transform, token2ix
 
+
 def _map_class2tokens_to_cbows(class2tokens):
     # this is possible since we don't store a differen't format, we just query it differently later
     return _map_class2tokens_to_n_grams(class2tokens)
 
+
 def _cbow_context(cbow, as_list=True):
     generator = _cbow_context_generator(cbow)
     return list(generator) if as_list else generator
+
 
 def _cbow_context_generator(cbow):
     for i in range(0, len(cbow) // 2):
@@ -278,6 +291,7 @@ def _cbow_context_generator(cbow):
     # ignore the target (len(cbow) // 2) precisely
     for j in range(len(cbow) // 2 + 1, len(cbow)):
         yield cbow[j]
+
 
 """ below is all the n-gram code (older) """
 
