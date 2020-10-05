@@ -14,7 +14,6 @@ Custom detectors:
 I intend to roll out the initial version with only title and maybe thumbnail/audio detection.
 
 # Notes to self:
-1. need to implement cbow
 2. need to logically group classes in token2vec code so that related classes that only appear once or twice can be used to "reward" the optimmizer when it is literally wrong but spiritually right (you know what I mean)
 3. implement various NLP models (these should probably favor the big tokens)
 4. implement various vision models for NLP (these should focus small tokens)
