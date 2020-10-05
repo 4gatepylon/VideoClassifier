@@ -21,3 +21,7 @@ I intend to roll out the initial version with only title and maybe thumbnail/aud
 5. implement vision models for youtube thumbnails and along with that you'll need to make the full raw data parser and whatnot
 6. consider doing the hardcoded volume-change model, let's avoid video/audio models until the future
 7. implement ensemble, add it to discord bot, make the models module have an args callable interface used by discord bot
+
+Make sure to check whether title token n-grams and cbows overlap! If they are too long for a title they should NOT overlap.
+
+Focus on 2.
