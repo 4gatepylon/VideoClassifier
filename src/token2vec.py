@@ -37,13 +37,13 @@ EMBEDDING_DIM = 25  # higher means more dimensions stuff can vary on
 CBOW_SIZE = 5  # this should be an odd number (one in the middle, even on each side)
 
 # think about improving this with an optimizer that changes learning rate!
-LEARNING_RATE_N_GRAM = 0.002
-NUM_EPOCHS_N_GRAM = 25
+LEARNING_RATE_N_GRAM = 0.005
+NUM_EPOCHS_N_GRAM = 10
 BATCH_SIZE_N_GRAM = 1000
 
 LEARNING_RATE_CBOW = 0.005
 NUM_EPOCHS_CBOW = 10
-BATCH_SIZE_CBOW = 500
+BATCH_SIZE_CBOW = 1000
 
 ###
 ### TODO : consider changing the targets by logically grouping them by my experience (i.e. compress many into one)
@@ -100,7 +100,7 @@ class CBOW(nn.Module):
     def __init__(self, vocab_size, embedding_dim, cbow_size):
         super(CBOW, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.linear1 = nn.Linear(2 * (cbow_size - 1) * embedding_dim, 264)
+        self.linear1 = nn.Linear((cbow_size - 1) * embedding_dim, 264)
         self.linear2 = nn.Linear(264, vocab_size)
 
     def forward(self, inputs):
@@ -206,8 +206,7 @@ def create_embeddings_cbow(
 ):
     cbows = _map_class2tokens_to_cbows(class2tokens) # TODO
 
-    _vocab = _generate_vocab(cbows) # this can be shared by both cbows and ngrams
-    vocab_size = len(_vocab)
+    vocab = _generate_vocab(cbows) # this can be shared by both cbows and ngrams
 
     token2ix = {word: i for i, word in enumerate(vocab)}
 
@@ -219,10 +218,11 @@ def create_embeddings_cbow(
             model = load_model(path)
         except:
             print("Failed to load cbow model, creating a new one")
-            model = CBOW(vocab_size, EMBEDDING_DIM, CBOW_SIZE)
+            model = CBOW(len(vocab), EMBEDDING_DIM, CBOW_SIZE)
     else:
-        model = CBOW(vocab_size, EMBEDDING_DIM, CBOW_SIZE)
+        model = CBOW(len(vocab), EMBEDDING_DIM, CBOW_SIZE)
 
+    losses = []
     loss_function = nn.NLLLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.005)
 
@@ -246,6 +246,8 @@ def create_embeddings_cbow(
             optimizer.step()
 
             total_loss += loss.item()
+        losses.append(total_loss)
+    
     print("finished training n-gram based token2vec (from the batch size)")
     for i in range(len(losses)):
         print(f"\tloss in epoch {i} was {losses[i]}")
@@ -275,7 +277,7 @@ def _cbow_context_generator(cbow):
         yield cbow[i]
     # ignore the target (len(cbow) // 2) precisely
     for j in range(len(cbow) // 2 + 1, len(cbow)):
-        yield cbow[i]
+        yield cbow[j]
 
 """ below is all the n-gram code (older) """
 
