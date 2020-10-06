@@ -1,6 +1,6 @@
 """ most basic classifier using the language, makes an assumption of representative sampling of the training data set """
 
-from models.lang_detect_model import get_classes_lang_dists
+from models.classification_lang_detect_model import get_classes_lang_dists
 
 from cache_manager import rw_most_recent_from_cache as rw
 

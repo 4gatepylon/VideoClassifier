@@ -9,7 +9,7 @@ import discord
 # check https://discordpy.readthedocs.io/en/latest/api.html (I based this on my streak bot though)
 from discord.ext import commands
 
-from models.lang_detect_model import predict_given_youtube_url
+from models.classification_lang_detect_model import predict_given_youtube_url
 from title_classifier import init_lang_distributions
 
 # programmed to react to Rythm bot requests like this:

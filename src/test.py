@@ -1,4 +1,7 @@
-from models.lang_detect_model import probability_class_given_lang, get_lang
+from models.classification_lang_detect_model import (
+    probability_class_given_lang,
+    get_lang,
+)
 
 from title_classifier import init_lang_distributions
 
@@ -37,7 +40,7 @@ tests = [
 def test(tests, classes_to_lang_dists):
     classes = classes_to_lang_dists["classes"].keys()
 
-    # TODO this should be its own method! in models.lang_detect_model
+    # TODO this should be its own method! in models.classification_lang_detect_model
     # and the youtube predictor depends on the title
     correct = 0
     for title, target in tests:
