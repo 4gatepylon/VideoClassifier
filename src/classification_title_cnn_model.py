@@ -19,7 +19,7 @@ import torch.optim as optim
 import random
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 1000
+BATCH_SIZE = 100000 # this is bigger than the actual size of the datasets
 
 LEARNING_RATE = 0.01
 TOKENIZATION_TYPE = "char"
@@ -69,12 +69,12 @@ class CNN_NLP(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, inputs):
-        # get the embeddings of inputs which are fed in as index singleton tensors
-        # output will be length embedding size, height max len of sentences (all is padded) and something else i forget
-        x_embed = torch.tensor([self.embed_dict[token] for token in inputs]).view(self.embed_dim, -1)
+        # current shape is maxlen * embed_dim and then becomes embed_dim * maxlen
+        x_embed = torch.cat([self.embed_dict[token] for token in inputs])
+        x_embed = x_embed.view(1, self.embed_dim, -1)
 
         # apply a replu to each of the convolutions
-        x_conv_list = [F.relu(conv1d(x_reshaped)) for conv1d in self.conv1d_list]
+        x_conv_list = [F.relu(conv1d(x_embed)) for conv1d in self.conv1d_list]
 
         # max pool each of the convolutions
         x_pool_list = [
@@ -87,9 +87,9 @@ class CNN_NLP(nn.Module):
         # the cat is dropped out then we fully connect them to a linear layer of size num_classes
         logits = self.fc(self.dropout(x_fc))
         # then those are softmaxed so we can get probabilities... there should be num_classes probs
-        probs = F.softmax(logits, dim=1)
+        #probs = F.softmax(logits, dim=1) # don't want to use this for now
 
-        return probs
+        return logits
 
 
 """ return 
@@ -104,6 +104,7 @@ def embedding_info(embedding_type=None):
     embedding, _transform, token2ix = initialized_embeddings[
         embedding_type if embedding_type else EMBEDDING_TYPE
     ]
+    embedding = {tensor.item() : embed for tensor, embed in embedding.items()}
     return embedding, _transform, token2ix
 
 
@@ -149,49 +150,58 @@ def train():
     # _transform is token, token2ix -> tensor(token2ix[token]) (i.e. tensor for index)
     # token2ix is token -> unique # id (the one passed into the tensor in _transform and used by embedding)
     embedding, _transform, token2ix = embedding_info()
+    #print(list(embedding.values())[0].shape, torch.zeros((1, EMBEDDING_DIM)).shape) # they are the same
+    # set pad to be zeroed out since I think having it not create value will be good otherwise it might be reading too much
+    # into things (maybe the length idk)
+    embedding[0] = torch.zeros((1, EMBEDDING_DIM))
     # class : [list of a bunch of padded titles that are tokenized]
-    class2titles = padded_titles()
+    class2titles, maxlen = padded_titles()
     # class : index in the output tensor corresponding to the
-    class2idx = {_class: i for _class, i in enumerate(class2titles.keys())}
+    class2idx = {_class: i for i, _class in enumerate(class2titles.keys())}
+
 
     model = CNN_NLP(
-        pretrained_embedding=embedding,
+        embedding=embedding,
         embed_dim=EMBEDDING_DIM,
         filters=FILTERS,
         num_classes=len(class2titles.keys()),
     )
 
     losses = []
-    loss_function = nn.NLLLoss()
+    loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
     print(f"training NLP CNN model")
-    for epoch in range(epochs):
+    for epoch in range(NUM_EPOCHS):
         print(f"\tepoch {epoch}")
 
         total_loss = 0
         # this is kind of a gimmick
         # TODO in the future we'll want to do a training validation split
         for target_class, class_titles in class2titles.items():
-            for title in some_items(batch_size, class_titles):
-                # we have a softmax at the end
-                target = torch.zeroes((1, len(class2idx.keys())))
-                target[class2idx[target_class]] = 1
+            for title in some_items(BATCH_SIZE, class_titles):
+                # target is an index in the probs for the correct one
+                # it's a tensor (1d) for each channel's index
+                target_index = torch.tensor([class2idx[target_class]])
 
-                inputs = [torch.tensor(token2ix[w], dtype=torch.long) for w in title]
+                inputs = [token2ix[w] for w in title]
 
                 model.zero_grad()
-                probs = model(inputs)
+                logits = model(inputs)
 
-                loss = loss_function(probs, target)
+                loss = loss_function(logits, target_index)
 
-                loss.backward()
+                loss.backward(retain_graph=True)
                 optimizer.step()
 
                 total_loss += loss.item()
         losses.append(total_loss)
+    
+    print("Done training. Here are the losses.")
+    for i in range(len(losses)):
+        print(f"\tloss in epoch {i} was {losses[i]}")
 
-    print(f"Done training. Now storing pretrained model with timestamp.")
+    print(f"Now storing pretrained model with timestamp.")
     save_model(model, SAVE_PATH)
 
     print(f"Done saving model.")

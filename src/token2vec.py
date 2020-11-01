@@ -453,9 +453,10 @@ def some_items(k, items):
         send = set()
         while len(send) < k:
             # rand-int is inclusive
-            send.add(items[random.randint(0, len(items) - 1)])
-        for item in send:
-            yield item
+            index = random.randint(0, len(items) - 1)
+            send.add(index)
+        for index in send:
+            yield items[index]
 
 
 if __name__ == "__main__":

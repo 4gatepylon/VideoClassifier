@@ -65,7 +65,7 @@ TOKEN_TO_IX_CHAR = EMBEDDING_STORE_PATH_CHAR + "token2ix/"
 TOKEN_TO_IX_PAREN = EMBEDDING_STORE_PATH_PAREN + "token2ix/"
 
 # we will choose to not care about embedding train type since we have a shared dimensionality
-NLP_CNN_PATH = PRETRAINED_PATH + "nlp-model/"
+NLP_CNN_PATH = PRETRAINED_PATH + "nlp-cnn-model/"
 NLP_CNN_CHAR_PATH = NLP_CNN_PATH + "char-tokenization/"
 NLP_CNN_PAREN_PATH = NLP_CNN_PATH + "paren-tokenization/"
 

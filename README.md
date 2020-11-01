@@ -1,9 +1,12 @@
 # VideoClassifier
-Classifies Videos for Music Box into One a Few Categories
+Classifies Videos for Music Box into One a Few Categories. Later might become a shitpost detector if I actually care. It's a good learning project but lame to use (i.e. who wants to ruin the magic of shitposts).
 
-Tentatively: I'm thinking of Shitpost/Meme, Tohou/Weeb, Legit/Music, Miscellaneous
+Current classes are obvious from the structure in /data go read it. (Code is flexible to the filesystem).
 
-But mainly this is an alert system for shitposts. I intend to include ensemble learning to combine different sources: the video, the thumbnail, the sound, and the title. I may also write in some custom code as well to help detect shitposts.
+Currently everything should "work" but it doesn't really work. Training the NN makes loss go up. I'm not sure why. It is a meme.
+
+There is a discord bot which tells you what a video's type is when you run it and do !p (piggybacking off the commonly-used
+but Rythm).
 
 # I cut this of short so here are some ideas for the future:
 
@@ -16,15 +19,11 @@ Custom detectors:
 I intend to roll out the initial version with only title and maybe thumbnail/audio detection.
 
 # Notes to self:
-2. need to logically group classes in token2vec code so that related classes that only appear once or twice can be used to "reward" the optimmizer when it is literally wrong but spiritually right (you know what I mean)
-3. implement various NLP models (these should probably favor the big tokens)
-4. implement various vision models for NLP (these should focus small tokens)
-5. implement vision models for youtube thumbnails and along with that you'll need to make the full raw data parser and whatnot
-6. consider doing the hardcoded volume-change model, let's avoid video/audio models until the future
-7. implement ensemble, add it to discord bot, make the models module have an args callable interface used by discord bot
-
-Make sure to check whether title token n-grams and cbows overlap! If they are too long for a title they should NOT overlap.
-
-Focus on 2.
-
-Please add spoiler tags to the bot!
+1. need to logically group classes in token2vec code so that related classes that only appear once or twice can be used to "reward" the optimmizer when it is literally wrong but spiritually right (you know what I mean)
+2. implement more NLP models (LSTM, naive RNN, etcetera)
+3. implement vision models for youtube thumbnails and along with that you'll need to make the full raw data parser and whatnot
+4. consider doing the hardcoded volume-change model, let's avoid video/audio models until the future
+5. actually do make some video models (i.e. rnns that use vision and sound or something)
+6. implement ensemble, add it to discord bot, make the models module have an args callable interface used by discord bot
+7. make use of some pre-trained embeddings or make better embeddings
+8. train this damn thing better dude
