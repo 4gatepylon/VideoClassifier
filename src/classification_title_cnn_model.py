@@ -174,16 +174,16 @@ def train():
         # TODO in the future we'll want to do a training validation split
         for target_class, class_titles in class2titles.items():
             for title in some_items(batch_size, class_titles):
+                # we have a softmax at the end
                 target = torch.zeroes((1, len(class2idx.keys())))
                 target[class2idx[target_class]] = 1
-                log_target = target  # TODO
 
-                _input = torch.tensor([token2ix[w] for w in title], dtype=torch.long)
+                inputs = [torch.tensor(token2ix[w], dtype=torch.long) for w in title]
 
                 model.zero_grad()
-                log_probs = model(_input)
+                probs = model(inputs)
 
-                loss = loss_function(log_probs, log_target)
+                loss = loss_function(probs, target)
 
                 loss.backward()
                 optimizer.step()
