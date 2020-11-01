@@ -161,12 +161,14 @@ def _init_token_classes():
 """ initialize embeddings by getting token classes using init_token_classes as above and n gram model below """
 
 
-def init_embeddings(as_list=True):
-    init = _init_embeddings()
+def init_embeddings(as_list=True, pretrained=False):
+    init = _init_embeddings(pretrained=pretrained)
     return list(init) if as_list else init
 
 
-def _init_embeddings():
+def _init_embeddings(pretrained=False):
+    if pretrained:
+        print(f"Will try to find pretrained embeddings.")
     # there are many opportunities to shorten this code
     # would be nicer to use the generator and generate in the for loop if possible
     class2tokens_dicts = init_token_classes()
@@ -176,7 +178,7 @@ def _init_embeddings():
         (model_path_paren_n_gram, "paren tokenization"),
     ]:
         yield create_embeddings_n_gram(
-            class2tokens_dicts[i], path, _type, use_pretrained=False
+            class2tokens_dicts[i], path, _type, use_pretrained=pretrained, train=not pretrained
         )
         i += 1
     i = 0
@@ -185,7 +187,7 @@ def _init_embeddings():
         (model_path_paren_cbow, "paren tokenization"),
     ]:
         yield create_embeddings_cbow(
-            class2tokens_dicts[i], path, _type, use_pretrained=False
+            class2tokens_dicts[i], path, _type, use_pretrained=pretrained, train=not pretrained
         )
         i += 1
 
@@ -207,6 +209,7 @@ def create_embeddings_cbow(
     batch_size=BATCH_SIZE_CBOW,
     lr=LEARNING_RATE_CBOW,
     use_pretrained=True,
+    train=True,
 ):
     cbows = _map_class2tokens_to_cbows(class2tokens)  # TODO
 
@@ -223,6 +226,7 @@ def create_embeddings_cbow(
     if use_pretrained:
         try:
             model = load_model(path)
+            print(f"Successfully found pretrained model for cbow of {_type}")
         except:
             print("Failed to load cbow model, creating a new one")
             # + 1 for pad
@@ -230,43 +234,44 @@ def create_embeddings_cbow(
     else:
         model = CBOW(len(vocab) + 1, EMBEDDING_DIM, CBOW_SIZE)
 
-    losses = []
-    loss_function = nn.NLLLoss()
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    if train:
+        losses = []
+        loss_function = nn.NLLLoss()
+        optimizer = optim.SGD(model.parameters(), lr=lr)
 
-    print(f"training cbow for {_type}...")
-    for epoch in range(epochs):
-        print(f"\tepoch {epoch}")
+        print(f"training cbow for {_type}...")
+        for epoch in range(epochs):
+            print(f"\tepoch {epoch}")
 
-        total_loss = 0
-        for cbow in some_items(batch_size, cbows):
-            target = cbow[
-                len(cbow) // 2
-            ]  # i.e. 1 2 3 4 5 -> want 3 5 // 2 = 2 wich is right in zero indexing
-            context = _cbow_context(cbow)
+            total_loss = 0
+            for cbow in some_items(batch_size, cbows):
+                target = cbow[
+                    len(cbow) // 2
+                ]  # i.e. 1 2 3 4 5 -> want 3 5 // 2 = 2 wich is right in zero indexing
+                context = _cbow_context(cbow)
 
-            context_idxs = torch.tensor(
-                [token2ix[w] for w in context], dtype=torch.long
-            )
+                context_idxs = torch.tensor(
+                    [token2ix[w] for w in context], dtype=torch.long
+                )
 
-            model.zero_grad()
-            log_probs = model(context_idxs)
+                model.zero_grad()
+                log_probs = model(context_idxs)
 
-            loss = loss_function(
-                log_probs, torch.tensor([token2ix[target]], dtype=torch.long)
-            )
+                loss = loss_function(
+                    log_probs, torch.tensor([token2ix[target]], dtype=torch.long)
+                )
 
-            loss.backward()
-            optimizer.step()
+                loss.backward()
+                optimizer.step()
 
-            total_loss += loss.item()
-        losses.append(total_loss)
+                total_loss += loss.item()
+            losses.append(total_loss)
 
-    print("finished training cbow based token2vec (from the batch size)")
-    for i in range(len(losses)):
-        print(f"\tloss in epoch {i} was {losses[i]}")
+        print("finished training cbow based token2vec (from the batch size)")
+        for i in range(len(losses)):
+            print(f"\tloss in epoch {i} was {losses[i]}")
 
-    save_model(model, path)
+        save_model(model, path)
 
     _transform = lambda token, token2ix: torch.tensor(
         [token2ix[token]], dtype=torch.long
@@ -308,6 +313,7 @@ def create_embeddings_n_gram(
     batch_size=BATCH_SIZE_N_GRAM,
     lr=LEARNING_RATE_N_GRAM,
     use_pretrained=True,
+    train=True,
 ):
     n_grams = _map_class2tokens_to_n_grams(class2tokens)
 
@@ -322,6 +328,7 @@ def create_embeddings_n_gram(
     if use_pretrained:
         try:
             model = load_model(path)
+            print(f"Successfully found pretrained model for ngram of {_type}")
         except:
             print(
                 "Faild to load a model from the given path as requested, creating a new one"
@@ -331,40 +338,41 @@ def create_embeddings_n_gram(
     else:
         model = NGramLanguageModeler(len(vocab) + 1, EMBEDDING_DIM, GRAM_SIZE)
 
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    if train:
+        optimizer = optim.SGD(model.parameters(), lr=lr)
 
-    print(f"training n-gram for {_type}...")
-    for epoch in range(epochs):
-        print(f"\tepoch {epoch}")
+        print(f"training n-gram for {_type}...")
+        for epoch in range(epochs):
+            print(f"\tepoch {epoch}")
 
-        total_loss = 0
-        for n_gram in some_items(batch_size, n_grams):
-            context = (n_gram[i] for i in range(len(n_gram) - 1))  # generator
-            target = n_gram[-1]
+            total_loss = 0
+            for n_gram in some_items(batch_size, n_grams):
+                context = (n_gram[i] for i in range(len(n_gram) - 1))  # generator
+                target = n_gram[-1]
 
-            context_idxs = torch.tensor(
-                [token2ix[w] for w in context], dtype=torch.long
-            )
-            # torch accumulates gradient so you need to zero out
-            model.zero_grad()
-            # probabilities and loss
-            log_probs = model(context_idxs)
-            loss = loss_function(
-                log_probs, torch.tensor([token2ix[target]], dtype=torch.long)
-            )
-            # gradient descent
-            loss.backward()
-            optimizer.step()
-            # tensor.item() returns the number inside
-            total_loss += loss.item()
+                context_idxs = torch.tensor(
+                    [token2ix[w] for w in context], dtype=torch.long
+                )
+                # torch accumulates gradient so you need to zero out
+                model.zero_grad()
+                # probabilities and loss
+                log_probs = model(context_idxs)
+                loss = loss_function(
+                    log_probs, torch.tensor([token2ix[target]], dtype=torch.long)
+                )
+                # gradient descent
+                loss.backward()
+                optimizer.step()
+                # tensor.item() returns the number inside
+                total_loss += loss.item()
 
-        losses.append(total_loss)
+            losses.append(total_loss)
 
-    print("finished training n-gram based token2vec (from the batch size)")
-    for i in range(len(losses)):
-        print(f"\tloss in epoch {i} was {losses[i]}")
+        print("finished training n-gram based token2vec (from the batch size)")
+        for i in range(len(losses)):
+            print(f"\tloss in epoch {i} was {losses[i]}")
 
-    save_model(model, path)
+        save_model(model, path)
 
     _transform = lambda token, token2ix: torch.tensor(
         [token2ix[token]], dtype=torch.long

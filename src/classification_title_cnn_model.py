@@ -4,7 +4,7 @@ from parser import tokenized_class_titles, tokenized_class_titles_by_char
 
 # embedding_dim is going to be shared by both models so its ok to share the folder
 from token2vec import EMBEDDING_DIM, PAD
-from token2vec import NLP_CNN_CHAR_PATH, NLP_CNN_PAREN_PATH
+from parser import NLP_CNN_CHAR_PATH, NLP_CNN_PAREN_PATH
 
 # in the future may also want to be loading some models
 from cache_manager import save_model
@@ -100,7 +100,7 @@ class CNN_NLP(nn.Module):
 
 
 def embedding_info(embedding_type=None):
-    initialized_embeddings = init_embeddings(as_list=True)
+    initialized_embeddings = init_embeddings(as_list=True, pretrained=True)
     embedding, _transform, token2ix = initialized_embeddings[
         embedding_type if embedding_type else EMBEDDING_TYPE
     ]
@@ -198,4 +198,5 @@ def train():
 
 
 if __name__ == "__main__":
+    train()
     pass
