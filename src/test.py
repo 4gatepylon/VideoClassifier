@@ -1,4 +1,4 @@
-from models.classification_lang_detect_model import (
+from classification_lang_detect_model import (
     probability_class_given_lang,
     get_lang,
 )

@@ -31,7 +31,7 @@ import torch.optim as optim
 
 import random
 
-PAD = '<pad>'
+PAD = "<pad>"
 
 GRAM_SIZE = 5  # context size is gram size - 1
 EMBEDDING_DIM = 25  # higher means more dimensions stuff can vary on

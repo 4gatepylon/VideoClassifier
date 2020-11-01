@@ -11,7 +11,7 @@ from datetime import datetime
 """ this is hella reused to just read from cache and write if non-existent computationally expensive data """
 
 
-def rw_most_recent_from_cache(create, path, _type):
+def rw_most_recent_from_cache(create, path, _type, with_maxlen=False):
     try:
         to_open_file = path + max(
             file for file in listdir(path) if isfile(join(path, file))
@@ -22,7 +22,7 @@ def rw_most_recent_from_cache(create, path, _type):
             return out
     except:
         print(f"did not find a cached {_type}... will create one")
-        out = create()
+        out, maxlen = create()
 
         Path(path).mkdir(parents=True, exist_ok=True)
         to_write_file = path + datetime.now().strftime("%m-%d-%Y, %H:%M:%S")
@@ -30,7 +30,10 @@ def rw_most_recent_from_cache(create, path, _type):
         with open(to_write_file, "wb") as handle:
             pickle.dump(out, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        return out
+        if with_maxlen:
+            return out, maxlen
+        else:
+            return out
 
 
 """ state_dict/model storage """

@@ -238,6 +238,7 @@ def parse_full_data_raw(filename=RAW_FILE, path=FULL_DATA_PATH):
 
 def tokenized_class_titles_by_char(path=CLASSES_PATH, debug=False):
     class_titles = parse_only_title_classes(path=path)
+    maxlen = 0
 
     class_titles_tokens = {_class: [] for _class in class_titles.keys()}
     for _class, titles in class_titles.items():
@@ -247,11 +248,17 @@ def tokenized_class_titles_by_char(path=CLASSES_PATH, debug=False):
                 pre_map_chars=PRE_MAP_IN_STRING_FOR_TOKEN_BY_CHAR,
             )
         )
+
+    for _, titles in class_titles_tokens.items():
+        for title in titles:
+            maxlen = max(maxlen, len(title))
+
     # some "visualization"
     if debug:
         _debug_print(class_titles_tokens)
+        print(f"\n max len of any tokenized title was {maxlen}")
 
-    return class_titles_tokens
+    return class_titles_tokens, maxlen
 
 
 """ equivalent, but for chars, to their older brothers near the bottom of the code... yikes! """
@@ -281,6 +288,7 @@ def _title_tokenize_by_char(title, skip_characters=_SKIP_CHARACTERS_FOR_CHAR):
 
 def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
     class_titles = parse_only_title_classes(path=path)
+    maxlen = 0
 
     class_titles_tokens = {_class: [] for _class in class_titles.keys()}
     for _class, titles in class_titles.items():
@@ -295,11 +303,16 @@ def tokenized_class_titles(path=CLASSES_PATH, filter_short=True, debug=False):
             for i in range(len(titles)):
                 titles[i] = _map_tokens(_filter_tokens(titles[i]))
 
+    for _, titles in class_titles_tokens.items():
+        for title in titles:
+            maxlen = max(maxlen, len(title))
+
     # some "visualization"
     if debug:
         _debug_print(class_titles_tokens)
+        print(f"\n max len of any tokenized title was {maxlen}")
 
-    return class_titles_tokens
+    return class_titles_tokens, maxlen
 
 
 """ helper used in both to help provide information if things are bad """
@@ -551,6 +564,7 @@ def download_image(url, path):
 
 
 if __name__ == "__main__":
-    # class_titles_tokens = tokenized_class_titles(debug=True)
-    # lass_titles_tokens = tokenized_class_titles_by_char(debug=True)
+    #class_titles_tokens, ln = tokenized_class_titles(debug=True)
+    #class_titles_tokens, ln = tokenized_class_titles_by_char(debug=True)
+    #print(class_titles_tokens)
     pass
