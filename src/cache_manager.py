@@ -46,8 +46,11 @@ def save_model(model, path):
     torch.save(model, to_write_file)
 
 
-def load_model(path):
-    to_open_file = path + max(
-        file for file in listdir(path) if isfile(join(path, file))
+def load_model(path, name=None):
+    # load latest by timestamp if no name otherwise with a name
+    to_open_file = (
+        path + name
+        if name
+        else path + max(file for file in listdir(path) if isfile(join(path, file)))
     )
     return torch.load(to_open_file)
