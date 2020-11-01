@@ -335,7 +335,7 @@ stripe==2.40.0
 tabulate==0.8.3
 tensorboard==1.13.1
 tensorboardX==1.4
-tensorflow==1.13.1
+tensorflow==1.15.4
 tensorflow-estimator==1.13.0
 termcolor==1.1.0
 testing.common.database==2.0.3
