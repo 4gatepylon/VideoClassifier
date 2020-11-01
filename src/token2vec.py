@@ -232,7 +232,7 @@ def create_embeddings_cbow(
 
     losses = []
     loss_function = nn.NLLLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.005)
+    optimizer = optim.SGD(model.parameters(), lr=lr)
 
     print(f"training cbow for {_type}...")
     for epoch in range(epochs):

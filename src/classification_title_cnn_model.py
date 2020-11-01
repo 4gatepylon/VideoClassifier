@@ -1,4 +1,4 @@
-from token2vec import init_embeddings
+from token2vec import init_embeddings, some_items
 
 from parser import tokenized_class_titles, tokenized_class_titles_by_char
 
@@ -9,7 +9,14 @@ from functools import reduce
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
+import random
+
+NUM_EPOCHS = 10
+BATCH_SIZE = 1000
+
+LEARNING_RATE = 0.01
 TOKENIZATION_TYPE = "char"
 EMBEDDING_ALGO = "ngram"
 EMBEDDING_TYPES = {
@@ -55,9 +62,9 @@ class CNN_NLP(nn.Module):
         self.fc = nn.Linear(reduce(lambda acc, f: acc + f[1], filters, 0), num_classes)
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, input_ids):
-        # Get embeddings from `input_ids`. Output shape: (b, maxlen, embed_dim)
-        x_embed = self.embedding(input_ids).float()
+    def forward(self, inputs):
+        # Get embeddings from `inputs`. Output shape: (b, maxlen, embed_dim)
+        x_embed = self.embedding(inputs).view((1, -1))
 
         # Permute `x_embed` to match input shape requirement of `nn.Conv1d`.
         # Output shape: (b, embed_dim, max_len)
@@ -132,6 +139,57 @@ def padded_titles(tokenization_type=None):
         maxlen,
     )
 
+
+def train():
+    # embedding is {tensor (index) -> tensor}
+    # _transform is token, token2ix -> tensor(token2ix[token]) (i.e. tensor for index)
+    # token2ix is token -> unique # id (the one passed into the tensor in _transform and used by embedding)
+    embedding, _transform, token2ix = embedding_info()
+    # class : [list of a bunch of padded titles that are tokenized]
+    class2titles = padded_titles()
+    # class : index in the output tensor corresponding to the 
+    class2idx = {_class : i for _class, i in enumerate(class2titles.keys())}
+
+    model = CNN_NLP(
+        pretrained_embedding=embedding,
+        embed_dim=EMBEDDING_DIM,
+        filters=FILTERS,
+        num_classes=len(class2titles.keys()),
+    )
+
+    losses = []
+    loss_function = nn.NLLLoss()
+    optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
+
+    print(f"training NLP CNN model")
+    for epoch in range(epochs):
+        print(f"\tepoch {epoch}")
+
+        total_loss = 0
+        # this is kind of a gimmick
+        # TODO in the future we'll want to do a training validation split
+        for target_class, class_titles in class2titles.items():
+            for title in some_items(batch_size, class_titles):
+                target = torch.zeroes((1, len(class2idx.keys())))
+                target[class2idx[target_class]] = 1
+                log_target = target #TODO
+
+                _input = torch.tensor([token2ix[w] for w in title], dtype=torch.long)
+
+                model.zero_grad()
+                log_probs = model(_input)
+
+                loss = loss_function(
+                    log_probs, log_target
+                )
+
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item()
+        losses.append(total_loss)
+
+    print(f"Done training.")
 
 if __name__ == "__main__":
     pass
