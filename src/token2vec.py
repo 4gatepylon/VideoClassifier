@@ -31,6 +31,8 @@ import torch.optim as optim
 
 import random
 
+PAD = '<pad>'
+
 GRAM_SIZE = 5  # context size is gram size - 1
 EMBEDDING_DIM = 25  # higher means more dimensions stuff can vary on
 
@@ -210,7 +212,8 @@ def create_embeddings_cbow(
 
     vocab = _generate_vocab(cbows)  # this can be shared by both cbows and ngrams
 
-    token2ix = {word: i for i, word in enumerate(vocab)}
+    token2ix = {word: i + 1 for i, word in enumerate(vocab)}
+    token2ix[PAD] = 0
 
     if CBOW_SIZE % 2 == 0:
         raise ValueError(
@@ -222,15 +225,16 @@ def create_embeddings_cbow(
             model = load_model(path)
         except:
             print("Failed to load cbow model, creating a new one")
-            model = CBOW(len(vocab), EMBEDDING_DIM, CBOW_SIZE)
+            # + 1 for pad
+            model = CBOW(len(vocab) + 1, EMBEDDING_DIM, CBOW_SIZE)
     else:
-        model = CBOW(len(vocab), EMBEDDING_DIM, CBOW_SIZE)
+        model = CBOW(len(vocab) + 1, EMBEDDING_DIM, CBOW_SIZE)
 
     losses = []
     loss_function = nn.NLLLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.005)
 
-    print(f"training n-gram for {_type}...")
+    print(f"training cbow for {_type}...")
     for epoch in range(epochs):
         print(f"\tepoch {epoch}")
 
@@ -258,7 +262,7 @@ def create_embeddings_cbow(
             total_loss += loss.item()
         losses.append(total_loss)
 
-    print("finished training n-gram based token2vec (from the batch size)")
+    print("finished training cbow based token2vec (from the batch size)")
     for i in range(len(losses)):
         print(f"\tloss in epoch {i} was {losses[i]}")
 
@@ -308,7 +312,9 @@ def create_embeddings_n_gram(
     n_grams = _map_class2tokens_to_n_grams(class2tokens)
 
     vocab = _generate_vocab(n_grams)
-    token2ix = {word: i for i, word in enumerate(vocab)}
+
+    token2ix = {word: i + 1 for i, word in enumerate(vocab)}
+    token2ix[PAD] = 0
 
     losses = []
     loss_function = nn.NLLLoss()
@@ -320,9 +326,10 @@ def create_embeddings_n_gram(
             print(
                 "Faild to load a model from the given path as requested, creating a new one"
             )
-            model = NGramLanguageModeler(len(vocab), EMBEDDING_DIM, GRAM_SIZE)
+            # + 1 for pad
+            model = NGramLanguageModeler(len(vocab) + 1, EMBEDDING_DIM, GRAM_SIZE)
     else:
-        model = NGramLanguageModeler(len(vocab), EMBEDDING_DIM, GRAM_SIZE)
+        model = NGramLanguageModeler(len(vocab) + 1, EMBEDDING_DIM, GRAM_SIZE)
 
     optimizer = optim.SGD(model.parameters(), lr=lr)
 
