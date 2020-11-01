@@ -147,8 +147,8 @@ def train():
     embedding, _transform, token2ix = embedding_info()
     # class : [list of a bunch of padded titles that are tokenized]
     class2titles = padded_titles()
-    # class : index in the output tensor corresponding to the 
-    class2idx = {_class : i for _class, i in enumerate(class2titles.keys())}
+    # class : index in the output tensor corresponding to the
+    class2idx = {_class: i for _class, i in enumerate(class2titles.keys())}
 
     model = CNN_NLP(
         pretrained_embedding=embedding,
@@ -172,16 +172,14 @@ def train():
             for title in some_items(batch_size, class_titles):
                 target = torch.zeroes((1, len(class2idx.keys())))
                 target[class2idx[target_class]] = 1
-                log_target = target #TODO
+                log_target = target  # TODO
 
                 _input = torch.tensor([token2ix[w] for w in title], dtype=torch.long)
 
                 model.zero_grad()
                 log_probs = model(_input)
 
-                loss = loss_function(
-                    log_probs, log_target
-                )
+                loss = loss_function(log_probs, log_target)
 
                 loss.backward()
                 optimizer.step()
@@ -190,6 +188,7 @@ def train():
         losses.append(total_loss)
 
     print(f"Done training.")
+
 
 if __name__ == "__main__":
     pass
