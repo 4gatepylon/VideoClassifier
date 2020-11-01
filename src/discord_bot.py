@@ -19,6 +19,7 @@ from title_classifier import init_lang_distributions
 client = commands.Bot(command_prefix="!")
 client.remove_command("help")
 distributions = None
+spoiler = "/spoiler"
 
 api_key = None
 
@@ -38,6 +39,8 @@ async def p(ctx, *args):
     youtube_url = args[0]
 
     await ctx.send(
+        # spoiler tagging doesn't work and we don't seem to get a chance to pass in a param
+        # it only works for embeds ugh
         "class is probably {}".format(
             predict_given_youtube_url(youtube_url, distributions, api_key)
         )

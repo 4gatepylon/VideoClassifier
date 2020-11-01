@@ -64,14 +64,10 @@ EMBEDDING_MODEL_CBOW_PAREN = EMBEDDING_MODEL_PAREN + "cbow/"
 TOKEN_TO_IX_CHAR = EMBEDDING_STORE_PATH_CHAR + "token2ix/"
 TOKEN_TO_IX_PAREN = EMBEDDING_STORE_PATH_PAREN + "token2ix/"
 
-# we will choose to not care about embeddings
+# we will choose to not care about embedding train type since we have a shared dimensionality
 NLP_CNN_PATH = PRETRAINED_PATH + "nlp-model/"
-NLP_CNN_CHAR_PATH = NLP_PATH + "char-tokenization/"
-NLP_CNN_PAREN_PATH = NLP_PATH + "paren-tokenization/"
-
-NLP_LSTM_PATH = PRETRAINED_PATH + "lstm-model/"
-NLP_LSTM_CHAR_PATH = LSTM_PATH + "char-tokenization/"
-NLP_LSTM_PAREN_PATH = LSTM_PATH + "paren-tokenization/"
+NLP_CNN_CHAR_PATH = NLP_CNN_PATH + "char-tokenization/"
+NLP_CNN_PAREN_PATH = NLP_CNN_PATH + "paren-tokenization/"
 
 ### parsing constants
 PRE_MAP_IN_STRING = {
