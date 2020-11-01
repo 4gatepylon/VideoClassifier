@@ -45,14 +45,14 @@ class CNN_NLP(nn.Module):
     """
 
     def __init__(
-        self, pretrained_embedding, embed_dim, filters, num_classes, dropout=0.5
+        self, embed_dim, embedding, filters, num_classes, dropout=0.5
     ):
 
         super(CNN_NLP, self).__init__()
 
-        # Embedding layer
-        self.vocab_size, self.embed_dim = pretrained_embedding.shape
-        self.embedding = nn.Embedding.from_pretrained(pretrained_embedding)
+        # embedding layer is already trained and translated outside (it's kind of a meme)
+        self.embed_dict = embedding
+        self.embed_dim = embed_dim
 
         # Conv Network
         self.conv1d_list = nn.ModuleList(
@@ -69,29 +69,27 @@ class CNN_NLP(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, inputs):
-        # Get embeddings from `inputs`. Output shape: (b, maxlen, embed_dim)
-        x_embed = self.embedding(inputs).view((1, -1))
+        # get the embeddings of inputs which are fed in as index singleton tensors
+        # output will be length embedding size, height max len of sentences (all is padded) and something else i forget
+        x_embed = torch.tensor([self.embed_dict[token] for token in inputs]).view(self.embed_dim, -1)
 
-        # Permute `x_embed` to match input shape requirement of `nn.Conv1d`.
-        # Output shape: (b, embed_dim, max_len)
-        x_reshaped = x_embed.permute(0, 2, 1)
-
-        # Apply CNN and ReLU. Output shape: (b, num_filters[i], L_out)
+        # apply a replu to each of the convolutions
         x_conv_list = [F.relu(conv1d(x_reshaped)) for conv1d in self.conv1d_list]
 
-        # Max pooling. Output shape: (b, num_filters[i], 1)
+        # max pool each of the convolutions
         x_pool_list = [
             F.max_pool1d(x_conv, kernel_size=x_conv.shape[2]) for x_conv in x_conv_list
         ]
 
-        # Concatenate x_pool_list to feed the fully connected layer.
-        # Output shape: (b, sum(num_filters))
+        # concatenate the max pools
         x_fc = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list], dim=1)
 
-        # Compute logits. Output shape: (b, n_classes)
+        # the cat is dropped out then we fully connect them to a linear layer of size num_classes
         logits = self.fc(self.dropout(x_fc))
+        # then those are softmaxed so we can get probabilities... there should be num_classes probs
+        probs = F.softmax(logits, dim=1)
 
-        return logits
+        return probs
 
 
 """ return 
