@@ -564,7 +564,7 @@ def download_image(url, path):
 
 
 if __name__ == "__main__":
-    #class_titles_tokens, ln = tokenized_class_titles(debug=True)
-    #class_titles_tokens, ln = tokenized_class_titles_by_char(debug=True)
-    #print(class_titles_tokens)
+    # class_titles_tokens, ln = tokenized_class_titles(debug=True)
+    # class_titles_tokens, ln = tokenized_class_titles_by_char(debug=True)
+    # print(class_titles_tokens)
     pass
