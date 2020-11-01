@@ -8,6 +8,8 @@ Currently everything should "work" but it doesn't really work. Training the NN m
 There is a discord bot which tells you what a video's type is when you run it and do !p (piggybacking off the commonly-used
 but Rythm).
 
+Install pip w/ the requirements, though most of them are not used (I just kinda froze my entire local pip and got rid of the ones that dependabot).
+
 # I cut this of short so here are some ideas for the future:
 
 Custom detectors:
