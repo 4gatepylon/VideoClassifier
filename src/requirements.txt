@@ -210,7 +210,7 @@ pytube==9.6.0
 pytz==2019.2
 pyusb==1.0.2
 PyWavelets==1.1.1
-PyYAML==5.3.1
+PyYAML==5.4
 pyzipcode==2.0.0
 pyzmq==18.1.0
 quantiacsToolbox==3.0.1
