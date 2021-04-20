@@ -171,7 +171,7 @@ protobuf==3.6.1
 psutil==5.7.0
 psycopg2-binary==2.8.5
 ptyprocess==0.6.0
-py==1.8.2
+py==1.10.0
 pyasn1==0.4.7
 pyasn1-modules==0.2.8
 pybind11==2.5.0
