@@ -273,7 +273,7 @@ waitress==1.4.3
 watson-machine-learning-client==1.0.375
 wcwidth==0.2.4
 websocket-client==0.57.0
-websockets==8.1
+websockets==9.1
 Werkzeug==0.16.0
 wget==3.2
 wrapt==1.12.1
