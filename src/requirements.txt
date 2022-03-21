@@ -269,7 +269,7 @@ uritemplate==3.0.1
 urllib3==1.25.6
 vine==1.3.0
 virtualenv==20.0.31
-waitress==1.4.3
+waitress==2.1.1
 watson-machine-learning-client==1.0.375
 wcwidth==0.2.4
 websocket-client==0.57.0
