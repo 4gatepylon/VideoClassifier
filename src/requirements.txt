@@ -91,7 +91,7 @@ hpack==3.0.0
 hstspreload==2020.9.2
 http-client==0.1.22
 httpcore==0.9.1
-httpx==0.13.3
+httpx==0.23.0
 hyperframe==5.2.0
 ibm-cos-sdk==2.5.3
 ibm-cos-sdk-core==2.5.3
