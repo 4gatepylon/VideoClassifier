@@ -118,7 +118,7 @@ jsonschema==3.2.0
 junit-xml==1.9
 jupyter-client==5.3.3
 jupyter-core==4.5.0
-jwcrypto==0.8
+jwcrypto==1.4
 Keras==2.2.4
 Keras-Applications==1.0.7
 Keras-Preprocessing==1.0.9
